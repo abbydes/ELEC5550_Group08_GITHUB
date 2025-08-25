@@ -1,0 +1,51 @@
+#include <stdio.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "driver/uart.h"
+#include <portmacro.h>
+
+#ifndef portTICK_PERIOD_MS
+#define portTICK_PERIOD_MS (1000 / configTICK_RATE_HZ)
+#endif
+
+#define UART_PORT_NUM    UART_NUM_1
+#define UART_RX_PIN      16
+#define UART_TX_PIN      17 // not used (checking one-way comms)
+#define UART_BAUD_RATE   115200
+#define BUF_SIZE         256
+
+// UART Init initialisation
+void uart_init_receiver(void)
+{
+    uart_config_t uart_config = {
+        .baud_rate = UART_BAUD_RATE,
+        .data_bits = UART_DATA_8_BITS,
+        .parity    = UART_PARITY_DISABLE,
+        .stop_bits = UART_STOP_BITS_1,
+        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE
+    };
+    uart_driver_install(UART_PORT_NUM, BUF_SIZE*2, 0, 0, NULL, 0);
+    uart_param_config(UART_PORT_NUM, &uart_config);
+    uart_set_pin(UART_PORT_NUM, UART_TX_PIN, UART_RX_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+}
+
+// UART RX Task  (FreeRTOS task function)
+void uart_receive_task(void *arg)
+{
+    uint8_t data[BUF_SIZE]; //buffer stores bytes from UART
+    while(1)
+    {
+        int len = uart_read_bytes(UART_PORT_NUM, data, BUF_SIZE, 20 / portTICK_PERIOD_MS);
+        if(len > 0)
+        {
+            printf("%.*s", len, data); // print readable HID info after verifying UART is not empty
+        }
+    }
+}
+
+// ---------------- Main ----------------
+void app_main(void)
+{
+    uart_init_receiver();
+    xTaskCreate(uart_receive_task, "uart_rx_task", 2048, NULL, 1, NULL);
+}

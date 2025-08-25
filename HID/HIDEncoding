@@ -1,0 +1,138 @@
+#include <stdio.h>
+#include <string.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h" 
+#include "esp_log.h" /* structured logs instead of printf*/
+#include "driver/uart.h" /* UART driver API*/
+#include "usb/usb_host.h" /*USB host controller*/
+#include "usb/hid_host.h" /* USB HID specific library*/
+#include "sdkconfig.h" // Logging config macros are defined
+
+// Use hid_host_driver_config_t directly for compatibility with your ESP-IDF version
+
+// Define HID_HOST_DRIVER_EVENT_DISCONNECTED if not defined (for compatibility)
+#ifndef HID_HOST_DRIVER_EVENT_DISCONNECTED /* fall back value if not defined in SDK config*/
+#define HID_HOST_DRIVER_EVENT_DISCONNECTED 1
+#endif
+
+#define UART_PORT_NUM      UART_NUM_1   // UART0 for USB-to-PC serial, UART1 for external USB to UART comms
+#define UART_BAUD_RATE     115200
+#define UART_TX_PIN        17 /* ESP32 GPIO 1 is for UART internal, can arbitrarily choose pins for external USB use*/
+#define UART_RX_PIN        16 /* ESP32 GPIO 3 for UART internal, can arbitrarily choose pins for external USB use*/
+
+// writing UART to another board for serial ie. encoding information
+
+
+static const char *TAG = "HID_UART"; /* identifies log messages*/
+
+//UART Initialisation function
+static void uart_init(void) /* void, function returns no value just UART initialisation*/
+{
+    const uart_config_t uart_config = { /* constant as not changed, read only*/
+        .baud_rate = UART_BAUD_RATE, /* standard rate*/
+        .data_bits = UART_DATA_8_BITS, /* data bits per frame*/
+        .parity    = UART_PARITY_DISABLE, /* simple error detection*/
+        .stop_bits = UART_STOP_BITS_1, /* mark end of data frame */
+        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE /* no flow control*/
+    };
+
+    ESP_ERROR_CHECK(uart_driver_install(UART_PORT_NUM, 1024, 0, 0, NULL, 0)); /*installation of driver, cannot uart read or write without*/
+    ESP_ERROR_CHECK(uart_param_config(UART_PORT_NUM, &uart_config)); /* applies UART configuration tot he specified port*/
+    ESP_ERROR_CHECK(uart_set_pin(UART_PORT_NUM, UART_TX_PIN, UART_RX_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE)); /* routes UART to chosen pin, RTC * CTS unchanged*/
+}
+
+// HID Callback function
+static void hid_host_event_cb(hid_host_device_handle_t hid_dev, hid_host_driver_event_t event, void *arg) /* handle represents HID instance, event is an enum value reason for callback*/
+{
+    switch (event) {
+        case HID_HOST_DRIVER_EVENT_DISCONNECTED:
+            printf("HID device disconnected\n");
+            break;
+        #if defined(HID_HOST_DRIVER_EVENT_CONNECT)
+                case HID_HOST_DRIVER_EVENT_CONNECT:
+                    printf("HID device connected\n");
+                    // Register input report callback after device is connected
+                    hid_host_device_register_input_report_callback(hid_dev, hid_input_report_cb, NULL); /* input report callsback hid_input_report_cb, hid_dev is new device handle*/
+                    break;
+        #endif
+        default:
+            printf("Unknown HID event: %d\n", event);
+            break;
+    }
+}
+
+/* important step for encoding HID report to UART!!*/
+static void hid_input_report_cb(hid_host_device_handle_t hid_dev, const uint8_t *report, size_t report_len, void *arg)
+{
+    if(report_len < 3) return; // ignore invalid reports
+
+    uint8_t buttons = report[0]; // buttons on mouse are byte of report
+    int8_t x_move = (int8_t)report[1]; //x location is 2nd byte of report
+    int8_t y_move = (int8_t)report[2]; //y location is 3rd byte of report
+
+    // buttons are converted into string for UART
+    char btn_str[16] = ""; //setting up empty initial array of size 16
+    if(buttons & 0x01) strcat(btn_str, "L"); //LHS mouse button appended to string
+    if(buttons & 0x02) strcat(btn_str, "R"); //RHS mouse button appended to string
+    if(buttons & 0x04) strcat(btn_str, "M"); //middle mouse button appended to string
+    if(btn_str[0]=='\0') strcpy(btn_str,"None"); //double checks if mouse button has been pressed
+
+    // Send readable data over UART
+    char out_buf[64]; //creating 64 length array for sending data over UART
+    int n = snprintf(out_buf, sizeof(out_buf), "X=%d Y=%d Buttons=%s\n", //sends X pos, Y pos & Button presses
+                     x_move, y_move, btn_str);
+    uart_write_bytes(UART_PORT_NUM, out_buf, n);
+
+    //ESP_LOGI(TAG, "%s", out_buf);
+
+
+    /* // Send raw HID report to UART
+    uart_write_bytes(UART_PORT_NUM, (const char *)report, report_len); 
+    /* written to port specified in UART_PORT_NUM,
+    (constant char*)report to convert HID uint8_t to char* for UART API
+    report_len is how many bytes need to be written*/
+
+    //Print the data as hex for debugging, not required in final code but prints to laptop serial.
+    /*printf("HID Report (%d bytes):\n", report_len);
+    for (int i = 0; i < report_len; i++) {
+        printf("%02X ", report[i]);
+    }
+    printf("\n"); */
+}
+
+// USB Host Task 
+static void usb_host_task(void *arg)
+{
+    const usb_host_config_t host_config = {
+        .skip_phy_setup = false, /*ESP board initialises the physical USB tranceiver*/
+        .intr_flags = ESP_INTR_FLAG_LEVEL1 /*setting priority of interrupt*/
+    };
+    ESP_ERROR_CHECK(usb_host_install(&host_config)); /* error checking USB host initialisation*/
+
+    while (1) {
+        uint32_t event_flags;
+        usb_host_lib_handle_events(portMAX_DELAY, &event_flags);
+        /* waits & checks for USB event to occur, event flag tracks event type*/
+    }
+}
+
+static void hid_host_task(void *arg)
+{
+    hid_host_driver_config_t hid_config = {
+        .create_background_task = false, /* task will be run*/
+        .callback = hid_host_event_cb, /* runs event that prints out connected/disconnect*/
+        .callback_arg = NULL 
+    };
+    ESP_ERROR_CHECK(hid_host_install(&hid_config));
+    // Note: Register input report callback after device connection in the event callback
+}
+
+// Main loop
+void app_main(void)
+{
+    uart_init(); /* initialise UART driver*/
+
+    /* split to run at the same time*/
+    xTaskCreatePinnedToCore(usb_host_task, "usb_host", 4096, NULL, 2, NULL, 0); /*freeRTOS for USB_host_task, 4096 stack size, 2 task priority, core 0*/
+    xTaskCreatePinnedToCore(hid_host_task, "hid_host", 4096, NULL, 2, NULL, 0); /*freeRTOS for HID_host_task, 4096 stack size, 2 task priorty, core 0*/
+}
