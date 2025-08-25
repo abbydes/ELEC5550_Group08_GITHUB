@@ -1,0 +1,56 @@
+#include <stdio.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "usb/usb_host.h"
+
+/*callback function, called when the USB host library detects a HID device
+event_msg has details about HID device connection
+arg not used */
+static void client_event_cb(const usb_host_client_event_msg_t *event_msg, void *arg)
+{
+    switch (event_msg->event) { /* used to check if new device connected/removed*/
+        case USB_HOST_CLIENT_EVENT_NEW_DEV:
+            printf("New device connected!\n");
+            break;
+        case USB_HOST_CLIENT_EVENT_DEV_GONE:
+            printf("Device removed.\n");
+            break;
+        default:
+            printf("Unknown client event: %d\n", event_msg->event);
+            break;
+    }
+}
+
+/* runs in its own FreeRTOS task, allowing for it to run separately to other tasks
+intialises + handles USB host event*/
+static void usb_host_lib_task(void *arg)
+{
+    const usb_host_config_t host_config = {
+        .skip_phy_setup = false, /* ESP32 S3 will automatically initialise USB hardware*/
+        .intr_flags = ESP_INTR_FLAG_LEVEL1 /* sets interrupt priority to 1 (lowest, 7 highest)*/
+    };
+    ESP_ERROR_CHECK(usb_host_install(&host_config)); /* installs USB host w/ host_config above within an error checker*/
+
+    const usb_host_client_config_t client_config = { 
+        .is_synchronous = false, /* asychnronous USB host library, callback function used when event occurs*/
+        .max_num_event_msg = 5, /* event message queue, only 5 held at once*/
+        .async = {
+            .client_event_callback = client_event_cb, /* function pointer to client_event_cb*/
+            .callback_arg = NULL
+        }
+    };
+    usb_host_client_handle_t client_hdl; /*client ID*/
+    ESP_ERROR_CHECK(usb_host_client_register(&client_config, &client_hdl)); /* assigns code as a client in the USB host library*/
+
+    printf("USB Host started. Waiting for device...\n");
+
+    while (1) {
+        usb_host_client_handle_events(client_hdl, portMAX_DELAY); /* waits for USB events before calling back*/
+    }
+}
+
+void app_main(void)
+{
+    xTaskCreate(usb_host_lib_task, "usb_host_lib_task", 4096, NULL, 2, NULL);
+    /* new FreeRTOS task, runs usb_host_lib_task, order 2 so it is important but not crucial*/
+}
