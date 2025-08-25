@@ -30,3 +30,6 @@ Code regarding HID Encoding/decoding can be found in the HID folder.
 The project specifies the connection of a USB flashdrive into a module which then encodes the MSC data, transfers it over the laser, decodes it and provides it to the host laptop.
 
 Code regarding MSC Encoding/decoding can be found in the MSC folder.
+
+## File Management
+All files are to be uploaded to their respective folders. New file versions to be created each week to allow for proper version control.
