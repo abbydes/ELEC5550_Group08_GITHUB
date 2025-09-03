@@ -1,0 +1,159 @@
+#include <Arduino.h>
+#include <FS.h>
+#include "SPIFFS.h"
+
+HardwareSerial LaserSerial(1);  // Laser RX/TX
+
+#define TX_PIN 17
+#define RX_PIN 16
+#define START_BYTE 0x7E
+#define MAX_PAYLOAD 128
+#define ACK 0x06
+#define NAK 0x15
+
+File rxFile;
+String currentFile;
+uint32_t expectedSize = 0;
+uint32_t receivedSize = 0;
+
+void sendAck(bool ok){
+  LaserSerial.write(ok ? ACK : NAK);
+}
+
+void handlePacket(uint8_t type, uint8_t* data, uint8_t len){
+  if(type == 0x01){ // FILE_INFO
+    uint8_t nameLen = data[0];
+    currentFile = String((char*)&data[1], nameLen);
+    memcpy(&expectedSize, &data[1 + nameLen], sizeof(expectedSize));
+    receivedSize = 0;
+    if(rxFile) rxFile.close();
+
+    // Ensure file has a leading slash
+    if(!currentFile.startsWith("/")) currentFile = "/" + currentFile;
+
+    rxFile = SPIFFS.open(currentFile, "w");
+    Serial.printf("# Receiving file: %s (%d bytes)\n", currentFile.c_str(), expectedSize);
+  } 
+  else if(type == 0x02){ // FILE_DATA
+    if(rxFile){
+      rxFile.write(data, len);
+      receivedSize += len;
+      Serial.printf("# Received chunk (%d/%d)\n", receivedSize, expectedSize);
+    }
+  } 
+  else if(type == 0x03){ // FILE_END
+    if(rxFile){
+      rxFile.close();
+      Serial.printf("# File %s saved (%d bytes)\n", currentFile.c_str(), receivedSize);
+    }
+  }
+}
+
+void setup(){
+  Serial.begin(115200);              
+  LaserSerial.begin(9600, SERIAL_8N1, RX_PIN, TX_PIN);
+
+  if(!SPIFFS.begin(true)){
+    Serial.println("# SPIFFS mount failed!");
+    while(1);
+  }
+
+  Serial.println("# Laser RX + USB Serial Bridge ready");
+}
+
+void loop(){
+  // --------- Laser packet parsing ---------
+  static enum { WAIT_START, WAIT_TYPE, WAIT_LEN, WAIT_DATA, WAIT_CHECKSUM } state = WAIT_START;
+  static uint8_t buffer[MAX_PAYLOAD];
+  static uint8_t type=0, len=0, index=0, checksum=0;
+
+  while(LaserSerial.available()){
+    uint8_t b = LaserSerial.read();
+    switch(state){
+      case WAIT_START:
+        if(b == START_BYTE){ state = WAIT_TYPE; checksum = 0; }
+        break;
+      case WAIT_TYPE:
+        type = b; checksum += b; state = WAIT_LEN;
+        break;
+      case WAIT_LEN:
+        len = b; checksum += b; index = 0;
+        if(len > 0 && len <= MAX_PAYLOAD) state = WAIT_DATA;
+        else if(len == 0) state = WAIT_CHECKSUM;
+        else state = WAIT_START;
+        break;
+      case WAIT_DATA:
+        buffer[index++] = b; checksum += b;
+        if(index >= len) state = WAIT_CHECKSUM;
+        break;
+      case WAIT_CHECKSUM:
+        if(checksum == b){ handlePacket(type, buffer, len); sendAck(true); }
+        else { Serial.println("# Checksum error!"); sendAck(false); }
+        state = WAIT_START;
+        break;
+    }
+  }
+
+  // --------- USB Serial commands ---------
+  static String command;
+  while(Serial.available()){
+    char c = Serial.read();
+    if(c == '\n' || c == '\r'){
+      command.trim();
+
+      if(command.equalsIgnoreCase("LIST")){
+        File root = SPIFFS.open("/");
+        File file = root.openNextFile();
+        while(file){
+          String fname = file.name();
+          // Strip leading '/' so Python doesn’t get confused
+          if(fname.startsWith("/")) fname.remove(0,1);
+          Serial.println(fname);
+          file = root.openNextFile();
+        }
+      } 
+      else if(command.startsWith("READ ")){
+        String fname = command.substring(5);
+        fname.trim();
+        if(!fname.startsWith("/")) fname = "/" + fname;
+
+        Serial.printf("# READ request for %s\n", fname.c_str());
+        File f = SPIFFS.open(fname, "r");
+        if(f){
+          uint32_t size = f.size();
+          Serial.printf("SIZE %u\n", size);
+
+          uint8_t buf[128];
+          while(f.available()){
+            size_t n = f.read(buf, sizeof(buf));
+            Serial.write(buf, n);
+            Serial.flush();
+          }
+          f.close();
+          Serial.println("\n# Done sending file.");
+        } else {
+          Serial.println("SIZE 0");
+          Serial.printf("# ERROR: File %s not found!\n", fname.c_str());
+        }
+      } 
+      else if(command.startsWith("DELETE ")){
+        String fname = command.substring(7);
+        fname.trim();
+        if(!fname.startsWith("/")) fname = "/" + fname;
+
+        if(SPIFFS.exists(fname)){
+          SPIFFS.remove(fname);
+          Serial.printf("# Deleted file: %s\n", fname.c_str());
+        } else {
+          Serial.printf("# File not found: %s\n", fname.c_str());
+        }
+      } 
+      else {
+        Serial.println("# Unknown command!");
+      }
+      command = "";
+    } else {
+      command += c;
+    }
+  }
+}
