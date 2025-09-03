@@ -31,5 +31,15 @@ The project specifies the connection of a USB flashdrive into a module which the
 
 Code regarding MSC Encoding/decoding can be found in the MSC folder.
 
+## Prototyping
+This project includes the creation of both hardware and software. Rudimentary pieces of code were used to verify hardware designs for the PCB prototype.
+
+Code regarding hardware verification can be found in the PROTOTYPING folder.
+
+## Finalised
+All of the code must be finalised and submitted in a finalised github repository.
+
+Finalised code can be found in the FINALISED folder.
+
 ## File Management
 All files are to be uploaded to their respective folders. New file versions to be created each week to allow for proper version control.
