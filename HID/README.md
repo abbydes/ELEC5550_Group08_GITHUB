@@ -14,7 +14,7 @@ This folder contains code for HID Encoding/Decoding
 
 ### hid_host_v3
 * For transmitter side
-* Fully tested on keyboard and mouse HID devices
+* Fully tested and verified on keyboard and mouse HID devices
 * Serialisation of raw data is integrated
 * Checksum appends every byte except header and checksum bytes
 
