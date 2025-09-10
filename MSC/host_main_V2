@@ -1,0 +1,81 @@
+// ===================== host_main.c (UART server with RAM disk) =====================
+static void host_task(void *arg)
+{
+// Basic MBR-ish signature so Windows/macOS at least sees "a disk" (may still prompt to format)
+memset(g_disk, 0, H_SECTOR_SIZE * H_BLOCK_COUNT);
+g_disk[510] = 0x55; g_disk[511] = 0xAA; // signature
+
+
+ESP_LOGI(TAGH, "UART RAM-disk server ready: %u blocks x %u bytes", (unsigned)H_BLOCK_COUNT, (unsigned)H_SECTOR_SIZE);
+
+
+for (;;) {
+uint8_t cmd;
+if (h_uart_read_exact(&cmd, 1, portMAX_DELAY) != 0) continue;
+
+
+if (cmd == 'I') {
+uint8_t cap[8];
+memcpy(&cap[0], (uint8_t*)&(uint32_t){H_BLOCK_COUNT}, 4);
+memcpy(&cap[4], (uint8_t*)&(uint32_t){H_SECTOR_SIZE}, 4);
+h_uart_write_exact(cap, sizeof(cap));
+} else if (cmd == 'R') {
+uint32_t lba; uint8_t b[4];
+if (h_uart_read_exact(b, 4, pdMS_TO_TICKS(500)) != 0) continue;
+memcpy(&lba, b, 4);
+if (lba < H_BLOCK_COUNT) {
+h_uart_write_exact(&g_disk[lba * H_SECTOR_SIZE], H_SECTOR_SIZE);
+} else {
+static uint8_t zero[H_SECTOR_SIZE] = {0};
+h_uart_write_exact(zero, H_SECTOR_SIZE);
+}
+} else if (cmd == 'W') {
+uint32_t lba; uint8_t b[4];
+if (h_uart_read_exact(b, 4, pdMS_TO_TICKS(500)) != 0) continue;
+memcpy(&lba, b, 4);
+if (lba < H_BLOCK_COUNT) {
+h_uart_read_exact(&g_disk[lba * H_SECTOR_SIZE], H_SECTOR_SIZE, pdMS_TO_TICKS(1000));
+} else {
+uint8_t sink[H_SECTOR_SIZE];
+h_uart_read_exact(sink, H_SECTOR_SIZE, pdMS_TO_TICKS(1000));
+}
+uint8_t ack = 'K';
+h_uart_write_exact(&ack, 1);
+} else {
+// Unknown, drain one sector just in case
+uint8_t dump[H_SECTOR_SIZE];
+h_uart_read_exact(dump, sizeof(dump), pdMS_TO_TICKS(10));
+}
+}
+}
+
+
+void app_main(void)
+{
+g_disk = (uint8_t*)heap_caps_malloc(H_SECTOR_SIZE * H_BLOCK_COUNT, MALLOC_CAP_8BIT);
+assert(g_disk);
+
+
+uart_config_t cfg = {
+.baud_rate = H_UART_BAUD,
+.data_bits = UART_DATA_8_BITS,
+.parity = UART_PARITY_DISABLE,
+.stop_bits = UART_STOP_BITS_1,
+.flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+.source_clk = UART_SCLK_APB,
+};
+uart_driver_install(H_UART_PORT, 4096, 4096, 0, NULL, 0);
+uart_param_config(H_UART_PORT, &cfg);
+uart_set_pin(H_UART_PORT, H_UART_TX_PIN, H_UART_RX_PIN, -1, -1);
+
+
+xTaskCreatePinnedToCore(host_task, "host_task", 4096, NULL, 8, NULL, 0);
+}
+
+
+// ===================== Notes =====================
+// 1) Wiring: CROSS the UART: DEV.TX(17) -> HOST.RX(18), DEV.RX(18) -> HOST.TX(17), and common GND.
+// 2) Start with 921600 baud. After it's stable, you can try 2,000,000 but keep wires short (<15 cm).
+// 3) This RAM-disk will enumerate as a raw disk. Your PC may prompt to format it — that's expected.
+// 4) Once this works, you can swap the RAM-disk with real storage on host_main (SD, SPI flash, or USB MSC host).
+// In that case, implement the same 'I/R/W' UART protocol but back it with your storage API.
