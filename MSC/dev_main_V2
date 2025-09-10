@@ -1,0 +1,74 @@
+// ===================== dev_main.c (USB Device: TinyUSB MSC over UART) =====================
+7, TUSB_DESC_ENDPOINT, EPNUM_MSC_IN, TUSB_XFER_BULK, 64, 0,
+};
+
+
+// String descriptors
+static const char *string_desc_arr[] = {
+(const char[]){ 0x09, 0x04 }, // 0: English (0x0409)
+"Espressif",
+"UART MSC Bridge",
+"123456",
+};
+
+
+uint8_t const * tud_descriptor_device_cb(void) { return (uint8_t const *) &desc_device; }
+
+
+uint8_t const * tud_descriptor_configuration_cb(uint8_t index)
+{
+(void)index; return desc_fs_configuration;
+}
+
+
+uint16_t const * tud_descriptor_string_cb(uint8_t index, uint16_t langid)
+{
+(void)langid;
+static uint16_t desc[32];
+uint8_t count;
+if (index == 0) {
+memcpy(&desc[1], string_desc_arr[0], 2);
+count = 1;
+} else {
+const char *str = string_desc_arr[index];
+count = (uint8_t)strlen(str);
+if (count > 31) count = 31;
+for (uint8_t i = 0; i < count; i++) desc[1 + i] = str[i];
+}
+desc[0] = (TUSB_DESC_STRING << 8) | (2*count + 2);
+return desc;
+}
+
+
+// =========================== app_main ===========================
+void app_main(void)
+{
+// UART link init
+uart_config_t cfg = {
+.baud_rate = UART_BAUD,
+.data_bits = UART_DATA_8_BITS,
+.parity = UART_PARITY_DISABLE,
+.stop_bits = UART_STOP_BITS_1,
+.flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+.source_clk = UART_SCLK_APB,
+};
+uart_driver_install(UART_PORT, 4096, 4096, 0, NULL, 0);
+uart_param_config(UART_PORT, &cfg);
+uart_set_pin(UART_PORT, UART_TX_PIN, UART_RX_PIN, -1, -1);
+
+
+// TinyUSB init
+tinyusb_config_t tusb_cfg = { };
+ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
+
+
+// ask other board for capacity
+query_capacity_over_uart();
+
+
+ESP_LOGI(TAG, "MSC device up");
+while (1) {
+tud_task();
+vTaskDelay(1);
+}
+}
