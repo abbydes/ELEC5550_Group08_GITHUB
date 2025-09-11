@@ -31,10 +31,15 @@ The project specifies the connection of a USB flashdrive into a module which the
 
 Code regarding MSC Encoding/decoding can be found in the MSC folder.
 
-## Prototyping
-This project includes the creation of both hardware and software. Rudimentary pieces of code were used to verify hardware designs for the PCB prototype.
+## ESP32 Prototyping
+This project includes the creation of both hardware and software. Rudimentary pieces of code were used to verify hardware design using the ESP32-S3 as a stepping stone to PCB design.
 
-Code regarding hardware verification can be found in the PROTOTYPING folder.
+Code regarding ESP32-S3 hardware verification can be found in the ESP32 PROTOTYPING folder.
+
+## PCB Prototyping.
+Similary to the ESP32-S3 prototype testing, rudimentary pieces of code were required to verify the PCBs functionality in comparison to the ESP32-S3 prototype it was based on.
+
+Code regarding PCB hardware verification can be found in the PCB PROTOTYPING folder.
 
 ## Finalised
 All of the code must be finalised and submitted in a finalised github repository.
