@@ -36,7 +36,7 @@ This project includes the creation of both hardware and software. Rudimentary pi
 
 Code regarding ESP32-S3 hardware verification can be found in the ESP32 PROTOTYPING folder.
 
-## PCB Prototyping.
+## PCB Prototyping
 Similary to the ESP32-S3 prototype testing, rudimentary pieces of code were required to verify the PCBs functionality in comparison to the ESP32-S3 prototype it was based on.
 
 Code regarding PCB hardware verification can be found in the PCB PROTOTYPING folder.
