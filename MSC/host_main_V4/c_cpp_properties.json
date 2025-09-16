@@ -6,6 +6,9 @@
                 "${workspaceFolder}/**",
                 "C:/Users/abbyd/esp/v5.5/esp-idf/components/**",
                 "C:/Users/abbyd/msc_host/managed_components/espressif__usb_host_msc/include",
+                "C:/Users/abbyd/esp/v5.5/esp-idf/components/driver",
+                "C:/Users/abbyd/esp/v5.5/esp-idf/components/hal/include",
+                "C:/Users/abbyd/esp/v5.5/esp-idf/components/usb/include/esp_private",
                 "C:/Users/abbyd/.espressif/tools/xtensa-esp-elf/esp-14.2.0_20241119/xtensa-esp-elf/xtensa-esp-elf/include/**"
             ],
             "browse": {
