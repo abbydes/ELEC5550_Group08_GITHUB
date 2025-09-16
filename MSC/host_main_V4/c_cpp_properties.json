@@ -1,0 +1,32 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "C:/Users/abbyd/esp/v5.5/esp-idf/components/**",
+                "C:/Users/abbyd/msc_host/managed_components/espressif__usb_host_msc/include",
+                "C:/Users/abbyd/.espressif/tools/xtensa-esp-elf/esp-14.2.0_20241119/xtensa-esp-elf/xtensa-esp-elf/include/**"
+            ],
+            "browse": {
+                "path": [
+                    "C:/Users/abbyd/esp/v5.5/esp-idf/components",
+                    "C:/Users/abbyd/msc_host/managed_components/espressif__usb_host_msc/include",
+                    "C:/Users/abbyd/.espressif/tools/xtensa-esp-elf/esp-14.2.0_20241119/xtensa-esp-elf/xtensa-esp-elf/include"
+                ],
+                "limitSymbolsToIncludedHeaders": true
+            },
+            "defines": [
+                "ESP_PLATFORM",
+                "IDF_VER=\"v5.5\""
+            ],
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "windows-gcc-x64",
+            "compileCommands": [
+                "${workspaceFolder}/build/compile_commands.json"
+            ]
+        }
+    ],
+    "version": 4
+}
