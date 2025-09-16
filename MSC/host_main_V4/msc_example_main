@@ -1,0 +1,142 @@
+/*
+ * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Unlicense OR CC0-1.0
+ */
+
+#include "sdkconfig.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <inttypes.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_log.h"
+#include "driver/uart.h"
+#include "esp_err.h"
+
+// USB MSC includes
+#include "usb/usb_host.h"
+#include "usb/msc_host.h"
+#include "esp_private/msc_scsi_bot.h"   // SCSI BOT API
+
+static const char *TAG = "msc_host_boardB";
+
+// ---------------- UART CONFIG ----------------
+#define UART_PORT_NUM      UART_NUM_1
+#define UART_BAUD_RATE     115200
+#define UART_TX_PIN        17
+#define UART_RX_PIN        18
+#define UART_BUF_SIZE      1024
+
+static QueueHandle_t uart_queue;
+
+// ---------------- USB MSC ----------------
+static msc_host_device_handle_t msc_dev = NULL;
+
+// ---------------- UART FRAME ----------------
+static bool validate_checksum(uint8_t *frame, int len) {
+    if (len < 4) return false;
+    uint8_t type = frame[1];
+    uint8_t payload_len = frame[2];
+    if (len != payload_len + 4) return false;
+
+    uint32_t sum = type + payload_len;
+    for (int i = 0; i < payload_len; i++) sum += frame[3 + i];
+    uint8_t expected = (uint8_t)(0x100 - (sum & 0xFF));
+    return frame[len - 1] == expected;
+}
+
+// ---------------- UART RX TASK ----------------
+static void uart_rx_task(void *arg) {
+    uint8_t data[UART_BUF_SIZE];
+    uint8_t sector[512];
+
+    while (1) {
+        int len = uart_read_bytes(UART_PORT_NUM, data, sizeof(data), pdMS_TO_TICKS(100));
+        if (len > 0 && data[0] == 0xA5 && validate_checksum(data, len)) {
+            ESP_LOGI(TAG, "Received frame from Board A: type=%c, payload_len=%d", data[1], data[2]);
+            printf(">>> Laptop Monitor: RX from Board A [type=%c, len=%d]\n", data[1], data[2]);
+
+            if (data[1] == 'R') {
+                // READ SECTOR
+                uint32_t lba = (data[3] << 24) | (data[4] << 16) | (data[5] << 8) | data[6];
+                esp_err_t ret = scsi_cmd_read10(msc_dev, sector, lba, 1, sizeof(sector));
+                if (ret == ESP_OK) {
+                    uart_write_bytes(UART_PORT_NUM, (const char *)sector, sizeof(sector));
+                    ESP_LOGI(TAG, "Sent sector to Board A: LBA=%" PRIu32 ", bytes=%d", lba, (int)sizeof(sector));
+                    printf("<<< Laptop Monitor: TX to Board A [READ LBA=%" PRIu32 ", size=%d]\n", lba, (int)sizeof(sector));
+                } else {
+                    ESP_LOGE(TAG, "Failed to read LBA=%" PRIu32 " err=%s", lba, esp_err_to_name(ret));
+                    printf("xxx Laptop Monitor: READ failed [LBA=%" PRIu32 "]\n", lba);
+                }
+
+            } else if (data[1] == 'W') {
+                // WRITE SECTOR
+                uint32_t lba = (data[3] << 24) | (data[4] << 16) | (data[5] << 8) | data[6];
+                memcpy(sector, &data[7], sizeof(sector));
+                esp_err_t ret = scsi_cmd_write10(msc_dev, sector, lba, 1, sizeof(sector));
+                if (ret == ESP_OK) {
+                    uint8_t ack = 0xAA;
+                    uart_write_bytes(UART_PORT_NUM, (const char *)&ack, 1);
+                    ESP_LOGI(TAG, "Written LBA=%" PRIu32 ", ACK sent to Board A", lba);
+                    printf("<<< Laptop Monitor: TX to Board A [WRITE LBA=%" PRIu32 ", ACK sent]\n", lba);
+                } else {
+                    ESP_LOGE(TAG, "Failed to write LBA=%" PRIu32 " err=%s", lba, esp_err_to_name(ret));
+                    printf("xxx Laptop Monitor: WRITE failed [LBA=%" PRIu32 "]\n", lba);
+                }
+            }
+
+        }
+    }
+}
+
+// ---------------- USB TASK ----------------
+static void usb_task(void *args) {
+    // Install USB Host library
+    usb_host_config_t host_config = {
+        .intr_flags = ESP_INTR_FLAG_LEVEL1
+    };
+    ESP_ERROR_CHECK(usb_host_install(&host_config));
+
+    // Install MSC host driver
+    msc_host_driver_config_t msc_cfg = {0};  // zero-initialize
+    ESP_ERROR_CHECK(msc_host_install(&msc_cfg));
+
+    ESP_LOGI(TAG, "Waiting for USB MSC device...");
+    printf(">>> Laptop Monitor: Waiting for USB MSC device...\n");
+
+    // Wait for first device
+    while (!msc_dev) {
+        esp_err_t ret = msc_host_install_device(1, &msc_dev); // first device
+        if (ret == ESP_OK && msc_dev) break;
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
+
+    ESP_LOGI(TAG, "USB MSC device ready");
+    printf(">>> Laptop Monitor: USB MSC device connected and ready\n");
+
+    vTaskDelete(NULL);
+}
+
+// ---------------- APP MAIN ----------------
+void app_main(void) {
+    ESP_LOGI(TAG, "USB MSC Host Board B starting...");
+    printf(">>> Laptop Monitor: Board B USB MSC Host starting...\n");
+
+    // UART init
+    uart_config_t uart_config = {
+        .baud_rate = UART_BAUD_RATE,
+        .data_bits = UART_DATA_8_BITS,
+        .parity    = UART_PARITY_DISABLE,
+        .stop_bits = UART_STOP_BITS_1,
+        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+    };
+    ESP_ERROR_CHECK(uart_driver_install(UART_PORT_NUM, UART_BUF_SIZE, 0, 10, &uart_queue, 0));
+    ESP_ERROR_CHECK(uart_param_config(UART_PORT_NUM, &uart_config));
+    ESP_ERROR_CHECK(uart_set_pin(UART_PORT_NUM, UART_TX_PIN, UART_RX_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
+
+    // Start tasks
+    xTaskCreate(usb_task, "usb_task", 4096, NULL, 5, NULL);
+    xTaskCreate(uart_rx_task, "uart_rx_task", 4096, NULL, 5, NULL);
+}
