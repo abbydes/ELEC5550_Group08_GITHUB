@@ -1,0 +1,181 @@
+/*
+ * SPDX-FileCopyrightText: 2022-2025 Espressif Systems (Shanghai) CO LTD
+ *
+ * SPDX-License-Identifier: Unlicense OR CC0-1.0
+ *
+ * Board A: USB Device MSC that forwards block requests to Board B over UART.
+ */
+
+#include "sdkconfig.h"
+#include <stdio.h>
+#include <string.h>
+#include <inttypes.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "driver/uart.h"
+#include "esp_log.h"
+#include "esp_partition.h"
+#include "wear_levelling.h"
+#include "tinyusb.h"
+#include "tusb_msc_storage.h"
+
+static const char *TAG = "msc_device_boardA";
+
+// UART config (match Board B)
+#define UART_NUM            UART_NUM_2
+#define UART_TX_PIN         18
+#define UART_RX_PIN         17
+#define UART_BAUD_RATE      115200
+#define SECTOR_SIZE         512
+
+// --------------------------------------------------
+// Compute simple checksum for the frame
+// --------------------------------------------------
+static uint8_t compute_checksum(const uint8_t *frame, size_t len)
+{
+    uint32_t sum = 0;
+    for (size_t i = 1; i < len; i++) sum += frame[i];
+    return (uint8_t)(0x100 - (sum & 0xFF));
+}
+
+// --------------------------------------------------
+// UART setup
+// --------------------------------------------------
+static void uart_init(void)
+{
+    const uart_config_t uart_config = {
+        .baud_rate = UART_BAUD_RATE,
+        .data_bits = UART_DATA_8_BITS,
+        .parity    = UART_PARITY_DISABLE,
+        .stop_bits = UART_STOP_BITS_1,
+        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+    };
+    ESP_ERROR_CHECK(uart_driver_install(UART_NUM, SECTOR_SIZE * 2, SECTOR_SIZE * 2, 0, NULL, 0));
+    ESP_ERROR_CHECK(uart_param_config(UART_NUM, &uart_config));
+    ESP_ERROR_CHECK(uart_set_pin(UART_NUM, UART_TX_PIN, UART_RX_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
+}
+
+// --------------------------------------------------
+// MSC read callback: forward read request to Board B
+// --------------------------------------------------
+static int32_t msc_read_cb(uint32_t lba, void *buffer, uint32_t bufsize)
+{
+    uint8_t frame[7];
+    frame[0] = 0xA5;          // Start byte
+    frame[1] = 'R';           // Type: Read
+    frame[2] = 4;             // Payload length (LBA)
+    frame[3] = (lba >> 24) & 0xFF;
+    frame[4] = (lba >> 16) & 0xFF;
+    frame[5] = (lba >> 8) & 0xFF;
+    frame[6] = lba & 0xFF;
+
+    uint8_t checksum = compute_checksum(frame, sizeof(frame));
+    uart_write_bytes(UART_NUM, (const char *)frame, sizeof(frame));
+    uart_write_bytes(UART_NUM, (const char *)&checksum, 1);
+
+    ESP_LOGI(TAG, "Sent READ request to Board B: LBA=%" PRIu32, lba);
+    printf(">>> Board A Monitor: TX READ request LBA=%" PRIu32 "\n", lba);
+
+    int len = uart_read_bytes(UART_NUM, buffer, SECTOR_SIZE, pdMS_TO_TICKS(500));
+    if (len != SECTOR_SIZE) {
+        ESP_LOGE(TAG, "Failed to read sector from Board B, LBA=%" PRIu32, lba);
+        memset(buffer, 0, bufsize);
+        return -1;
+    }
+
+    ESP_LOGI(TAG, "Received sector from Board B: LBA=%" PRIu32, lba);
+    printf("<<< Board A Monitor: RX sector LBA=%" PRIu32 ", size=%d\n", lba, SECTOR_SIZE);
+
+    return bufsize;
+}
+
+// --------------------------------------------------
+// MSC write callback: forward write request to Board B
+// --------------------------------------------------
+static int32_t msc_write_cb(uint32_t lba, const void *buffer, uint32_t bufsize)
+{
+    uint8_t frame[7 + SECTOR_SIZE];
+    frame[0] = 0xA5;
+    frame[1] = 'W';           // Type: Write
+    frame[2] = 4;             // Only LBA length in header
+    frame[3] = (lba >> 24) & 0xFF;
+    frame[4] = (lba >> 16) & 0xFF;
+    frame[5] = (lba >> 8) & 0xFF;
+    frame[6] = lba & 0xFF;
+    memcpy(&frame[7], buffer, SECTOR_SIZE);
+
+    uint8_t checksum = compute_checksum(frame, 7); // checksum only covers header
+    uart_write_bytes(UART_NUM, (const char *)frame, 7 + SECTOR_SIZE);
+    uart_write_bytes(UART_NUM, (const char *)&checksum, 1);
+
+    ESP_LOGI(TAG, "Sent WRITE request to Board B: LBA=%" PRIu32, lba);
+    printf(">>> Board A Monitor: TX WRITE LBA=%" PRIu32 ", size=%d\n", lba, SECTOR_SIZE);
+
+    uint8_t ack;
+    int len = uart_read_bytes(UART_NUM, &ack, 1, pdMS_TO_TICKS(500));
+    if (len != 1 || ack != 0xAA) {
+        ESP_LOGE(TAG, "Write ACK not received, LBA=%" PRIu32, lba);
+        printf("xxx Board A Monitor: WRITE failed LBA=%" PRIu32 "\n", lba);
+        return -1;
+    }
+
+    ESP_LOGI(TAG, "WRITE acknowledged by Board B: LBA=%" PRIu32, lba);
+    printf("<<< Board A Monitor: WRITE ACK received LBA=%" PRIu32 "\n", lba);
+
+    return bufsize;
+}
+
+// --------------------------------------------------
+// App main
+// --------------------------------------------------
+void app_main(void)
+{
+    ESP_LOGI(TAG, "Board A USB Device MSC (transparent to laptop)");
+    printf(">>> Board A Monitor: Starting USB Device MSC\n");
+
+    uart_init();
+
+    // ---------------- SPI Flash with Wear Leveling ----------------
+    const esp_partition_t *part = esp_partition_find_first(
+        ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_FAT, "storage");
+    if (!part) {
+        ESP_LOGE(TAG, "Storage partition not found");
+        return;
+    }
+
+    wl_handle_t wl_handle;
+    esp_err_t ret = wl_mount(part, &wl_handle);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to mount wear leveling: %s", esp_err_to_name(ret));
+        return;
+    }
+
+    tinyusb_msc_spiflash_config_t spiflash_cfg = {
+        .wl_handle = wl_handle,
+        .callback_mount_changed = NULL,
+        .callback_premount_changed = NULL,
+        .mount_config = {
+            .format_if_mount_failed = true,
+            .max_files = 4,
+            .allocation_unit_size = 4096,
+        }
+    };
+    ESP_ERROR_CHECK(tinyusb_msc_storage_init_spiflash(&spiflash_cfg));
+
+    // ---------------- TinyUSB Device MSC ----------------
+    const tinyusb_config_t tusb_cfg = {
+        .device_descriptor = NULL, // default descriptors
+        .string_descriptor = NULL,
+        .string_descriptor_count = 0,
+        .external_phy = false,
+    };
+    ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
+
+    ESP_LOGI(TAG, "USB Device MSC initialized, waiting for laptop...");
+    printf(">>> Board A Monitor: USB MSC initialized, waiting for laptop...\n");
+
+    while (1) {
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}
+// --------------------------------------------------
