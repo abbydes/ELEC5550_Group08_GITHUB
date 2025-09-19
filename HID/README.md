@@ -1,15 +1,15 @@
 This folder contains code for HID Encoding/Decoding
 
 ### hid_host_v5
-*cleaned up comments
+* cleaned up comments
 
 ### hid_device_v4
-*edited code to receive UART HID frames and send to computer to act as USB HID keyboard/mouse
-  *remove app_send_hid_demo block, mouse_draw_square_next_delta(), constants DISTANCE_MAX, DELTA_SCALAR and its associated calls
-*cleaned up comments
+* edited code to receive UART HID frames and send to computer to act as USB HID keyboard/mouse
+  * remove app_send_hid_demo block, mouse_draw_square_next_delta(), constants DISTANCE_MAX, DELTA_SCALAR and its associated calls
+* cleaned up comments
 
 ### hid_host_v4
-*tested and validated sent data of up to baud rate of 912600 (in conjunction with hid_device_v3) - changed baud rate manually
+* tested and validated sent data of up to baud rate of 912600 (in conjunction with hid_device_v3) - changed baud rate manually
 * cleaned up comments (unfinished)
 
 ### hid_device_v3
