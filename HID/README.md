@@ -1,5 +1,12 @@
 This folder contains code for HID Encoding/Decoding
 
+### hid_host_v4
+* 
+
+### hid_device_v3
+* correct packet framing for received data
+* can receive data of up to baud rate of 912600
+
 ### hid_device_v2
 * For the receiver side
 * Does not include dummy testing of random serialised data to test output of receiver
