@@ -1,11 +1,18 @@
 This folder contains code for HID Encoding/Decoding
 
 ### hid_host_v4
-* 
+*can send data of up to baud rate of 912600 (in conjunction with hid_device_v3)
+* cleaned up comments (unfinished)
 
 ### hid_device_v3
 * correct packet framing for received data
-* can receive data of up to baud rate of 912600
+* can receive data of up to baud rate of 912600 (in conjunction with hid_host_v4)
+
+### hid_host_v3
+* For transmitter side
+* Fully tested and verified on keyboard and mouse HID devices
+* Serialisation of raw data is integrated
+* Checksum appends every byte except header and checksum bytes
 
 ### hid_device_v2
 * For the receiver side
@@ -18,12 +25,6 @@ This folder contains code for HID Encoding/Decoding
 
 ### hid_host_esp-idf
 * UNMODIFIED official example code from espressif ESP-IDF
-
-### hid_host_v3
-* For transmitter side
-* Fully tested and verified on keyboard and mouse HID devices
-* Serialisation of raw data is integrated
-* Checksum appends every byte except header and checksum bytes
 
 ### hid_keyboard_test
 * keyboard not tested
