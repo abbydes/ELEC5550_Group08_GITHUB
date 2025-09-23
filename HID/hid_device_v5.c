@@ -101,14 +101,6 @@ static void print_frame_hex(const char *tag, uint8_t *frame, int len) {
     printf("\n");
 }
 
-typedef enum {
-    MOUSE_DIR_RIGHT,
-    MOUSE_DIR_DOWN,
-    MOUSE_DIR_LEFT,
-    MOUSE_DIR_UP,
-    MOUSE_DIR_MAX,
-} mouse_dir_t;
-
 static bool validate_checksum(uint8_t *frame, int len) {
     if (len < 4) return false;
 
@@ -272,5 +264,6 @@ void app_main(void)
         tud_task();  // keep TinyUSB stack alive
         vTaskDelay(pdMS_TO_TICKS(10));
     }
+
 
 }
