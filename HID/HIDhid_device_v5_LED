@@ -12,6 +12,7 @@
 #define UART_BAUD_RATE     912600
 #define UART_RX_PIN        18              // Receiver GPIO18
 #define UART_BUF_SIZE      1024
+#define LED_PIN            6
 
 static QueueHandle_t uart_queue;           // UART event queue
 
@@ -101,8 +102,6 @@ static void print_frame_hex(const char *tag, uint8_t *frame, int len) {
     printf("\n");
 }
 
-static void init_gpio(void);
-
 static bool validate_checksum(uint8_t *frame, int len) {
     if (len < 4) return false;
 
@@ -127,6 +126,8 @@ static bool validate_checksum(uint8_t *frame, int len) {
         return false;
     }
 }
+
+static void init_gpio(void);
 
 static void uart_rx_task(void *arg)
 {
@@ -216,8 +217,6 @@ static void uart_rx_task(void *arg)
 
 void app_main(void)
 {
-    init_gpio();
-
     // Initialize button that will trigger HID reports
     const gpio_config_t boot_button_config = {
         .pin_bit_mask = BIT64(APP_BUTTON),
@@ -251,6 +250,7 @@ void app_main(void)
         .stop_bits = UART_STOP_BITS_1,
         .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
     };
+
     ESP_ERROR_CHECK(uart_driver_install(UART_PORT_NUM, UART_BUF_SIZE, 0, 10, &uart_queue, 0));
     ESP_ERROR_CHECK(uart_param_config(UART_PORT_NUM, &uart_config));
     ESP_ERROR_CHECK(uart_set_pin(UART_PORT_NUM,
@@ -260,17 +260,20 @@ void app_main(void)
                              UART_PIN_NO_CHANGE)); // CTS
 
     xTaskCreate(uart_rx_task, "uart_rx_task", 4096, NULL, 5, NULL);
+    xTaskCreate(led_task, "led_task", 2048, NULL, 5, NULL);
 
     ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
     ESP_LOGI(TAG, "USB initialization DONE");
+    init_gpio();
 
     while (1) {
         tud_task();  // keep TinyUSB stack alive
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 
-    #define LED_PIN     6
-    
+
+}
+
 static void init_gpio(void)
 {
     // Configure LED_PIN as output
@@ -284,7 +287,7 @@ static void init_gpio(void)
     gpio_config(&io_conf);
 
     // Configure INPUT_PIN as input (optional, if you want to read manually)
-    io_conf.pin_bit_mask = (1ULL << LASER_RX_PIN);
+    io_conf.pin_bit_mask = (1ULL << UART_RX_PIN);
     io_conf.mode = GPIO_MODE_INPUT;
     gpio_config(&io_conf);
 }
@@ -292,7 +295,7 @@ static void init_gpio(void)
 static void led_task(void *arg)
 {
     while (1) {
-        int level = gpio_get_level(LASER_RX_PIN);
+        int level = gpio_get_level(UART_RX_PIN);
 
         if (level) {
             gpio_set_level(LED_PIN, 1);  // turn LED ON
@@ -302,8 +305,4 @@ static void led_task(void *arg)
 
         vTaskDelay(pdMS_TO_TICKS(50)); // check 20 times per second, enough for human eye
     }
-}
-
-//Add this to your UART initialization function
-    xTaskCreate(led_task, "led_task", 2048, NULL, 5, NULL);
 }
