@@ -9,7 +9,7 @@
 #include "driver/uart.h"
 
 #define UART_PORT_NUM      UART_NUM_1
-#define UART_BAUD_RATE     912600
+#define UART_BAUD_RATE     921600
 #define UART_RX_PIN        18              // Receiver GPIO18
 #define UART_BUF_SIZE      1024
 
@@ -267,3 +267,4 @@ void app_main(void)
 
 
 }
+
