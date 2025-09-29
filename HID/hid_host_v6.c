@@ -25,7 +25,7 @@ static const char *TAG = "example";
 // ---------------- UART framing to GPIO17 (ESP32-S3) ----------------
 #define SERIAL_UART_NUM   UART_NUM_1
 #define SERIAL_TX_GPIO    17
-#define SERIAL_BAUD       115200
+#define SERIAL_BAUD       921600
 #define SERIAL_MAGIC      0xA5      //start marker for UART packets
 //--------------------------------------------------------------------
 
@@ -683,4 +683,5 @@ void app_main(void)
     gpio_isr_handler_remove(APP_QUIT_PIN);
     xQueueReset(app_event_queue);
     vQueueDelete(app_event_queue);
+
 }
