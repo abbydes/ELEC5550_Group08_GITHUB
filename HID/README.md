@@ -1,5 +1,25 @@
 This folder contains code for HID Encoding/Decoding
 
+### hid_device_v7
+* based off hid_device_v5
+* edited menuconfig - works with keyboard acting as device on mac using ESP32S3DevKitC-1 directly connecting Tx/Rx pins
+*  On the Receiver side:
+	1. Run in terminal - idf.py menuconfig
+	2. Component config -->TinyUSB Stack -->TinyUSB DCD -->DCD Mode -->Confirm that the x is in: (X) Buffer DMA
+
+	1. Go back to TinyUSB Stack-->
+	2. Human Interface Device Class (HID) -->TinyUSB HID interfaces count -->Press 'Enter' to change the count number to 2 (one for keyboard, one for mouse)
+
+	1. Go back to TinyUSB Stack-->
+	2. USB Peripheral (OTG1.1)-->Confirm that the x is in: (X) OTG1.1
+	3. Press S to save, press Q to quit back to terminal, Rebuild
+
+### hid_device_v6
+* changed layout of keyboard/mouse ESP_LOGI prints
+
+### hid_device_v5
+* changed from 1 interface to 2 interfaces
+
 ### hid_host_v5
 * cleaned up comments
 
