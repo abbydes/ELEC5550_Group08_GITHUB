@@ -129,6 +129,8 @@ static bool validate_checksum(uint8_t *frame, int len) {
 
 static void init_gpio(void);
 
+static void led_task(void *arg);
+
 static void uart_rx_task(void *arg)
 {
     uint8_t buf[UART_BUF_SIZE];
