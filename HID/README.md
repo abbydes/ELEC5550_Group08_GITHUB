@@ -1,4 +1,10 @@
 This folder contains code for HID Encoding/Decoding
+### hid_device_v8
+* Added UART framing errors and a valid frame timeout
+* Globals have been added to track the state
+* When no valid frame has arrived for 200ms or if framing errors occur a UART Frame error is pushed into the UART queue
+* Needs to be tested
+
 
 ### hid_device_v7
 * based off hid_device_v5
