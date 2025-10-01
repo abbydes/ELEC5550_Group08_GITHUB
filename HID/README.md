@@ -1,5 +1,14 @@
 This folder contains code for HID Encoding/Decoding
 
+### hid_device_v9
+* Works for keyboard & mouse on macbook using ESP32S3DevKitC-1 directly connecting Tx/Rx pins
+* Run instructions from hid_device_v7 --> idf.py menuconfig
+* fixed TUD_HID_DESCRIPTOR calls
+* corrected byte offsets for mouse data to include wheel
+* corrected interface numbering mismatch
+* added tud_mounted() check to ensure USB is fully enumerated before sending reports - using TinyUSB API calls tud_hid_n_ready(1) and tud_hid_n_mouse_report(1,...)
+* prints status every 5 seconds for USB UART connection status reporting
+
 ### hid_host_v7
 * removed excess UART framing code for simplicity
 
@@ -8,7 +17,6 @@ This folder contains code for HID Encoding/Decoding
 * Globals have been added to track the state
 * When no valid frame has arrived for 200ms or if framing errors occur a UART Frame error is pushed into the UART queue
 * Needs to be tested
-
 
 ### hid_device_v7
 * based off hid_device_v5
