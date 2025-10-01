@@ -1,4 +1,8 @@
 This folder contains code for HID Encoding/Decoding
+
+### hid_host_v7
+* removed excess UART framing code for simplicity
+
 ### hid_device_v8
 * Added UART framing errors and a valid frame timeout
 * Globals have been added to track the state
