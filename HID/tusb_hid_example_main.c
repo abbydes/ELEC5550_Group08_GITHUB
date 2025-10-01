@@ -21,9 +21,14 @@ static const char *TAG = "example";
 
 /************* TinyUSB descriptors ****************/
 
-const uint8_t hid_report_descriptor[] = {
-    TUD_HID_REPORT_DESC_KEYBOARD(HID_REPORT_ID(HID_ITF_PROTOCOL_KEYBOARD)),
-    TUD_HID_REPORT_DESC_MOUSE(HID_REPORT_ID(HID_ITF_PROTOCOL_MOUSE))
+// Keyboard report descriptor (standard boot keyboard)
+const uint8_t hid_kb_report_descriptor[] = {
+    TUD_HID_REPORT_DESC_KEYBOARD() // macro from tinyusb
+};
+
+// Mouse report descriptor (standard boot mouse)
+const uint8_t hid_mouse_report_descriptor[] = {
+    TUD_HID_REPORT_DESC_MOUSE() // macro from tinyusb
 };
 
 //Define string descriptors
@@ -33,27 +38,39 @@ const char *hid_string_descriptor[5] = {
     "TinyUSB",             // 1: Manufacturer
     "TinyUSB Device",      // 2: Product
     "123456",              // 3: Serials, should use chip ID
-    "HID Device",  // 4: HID
+    "Example HID interface",  // 4: HID
 };
 
 // total length: config desc + 2 * HID desc length
-#define TUSB_DESC_TOTAL_LEN      (TUD_CONFIG_DESC_LEN + CFG_TUD_HID * TUD_HID_DESC_LEN)
+#define TUSB_DESC_TOTAL_LEN  (TUD_CONFIG_DESC_LEN + 2 * TUD_HID_DESC_LEN)
 
+// Configuration descriptor with TWO HID interfaces (keyboard = itf 0, mouse = itf 1)
 static const uint8_t hid_configuration_descriptor[] = {
-    // Configuration number, interface count, string index, total length, attribute, power in mA
-    TUD_CONFIG_DESCRIPTOR(1, 1, 0, TUSB_DESC_TOTAL_LEN, TUSB_DESC_CONFIG_ATT_REMOTE_WAKEUP, 100),
+    // Configuration: 1 config, 2 interfaces
+    TUD_CONFIG_DESCRIPTOR(1, 2, 0, TUSB_DESC_TOTAL_LEN, TUSB_DESC_CONFIG_ATT_REMOTE_WAKEUP, 100),
 
-    // Interface number, string index, boot protocol, report descriptor len, EP In address, size & polling interval
-    TUD_HID_DESCRIPTOR(0, 4, false, sizeof(hid_report_descriptor), 0x81, 16, 10),
+    // HID Interface 0 (Keyboard)
+    // ifc_number, string_index, protocol, report_desc_len, EPin, size, interval
+    TUD_HID_DESCRIPTOR(0, 4, HID_ITF_PROTOCOL_KEYBOARD, sizeof(hid_kb_report_descriptor), 0x81, 8, 10),
+
+    // HID Interface 1 (Mouse)
+    TUD_HID_DESCRIPTOR(1, 4, HID_ITF_PROTOCOL_MOUSE, sizeof(hid_mouse_report_descriptor), 0x82, 8, 10),
 };
 
 /********* TinyUSB HID callbacks ***************/
 
 // Invoked when received GET HID REPORT DESCRIPTOR request
+// Return the correct HID report descriptor for the requested interface instance
 uint8_t const *tud_hid_descriptor_report_cb(uint8_t instance)
 {
-    // We use only one interface and one HID report descriptor, so we can ignore parameter 'instance'
-    return hid_report_descriptor;
+    if (instance == 0) {
+        // keyboard interface
+        return hid_kb_report_descriptor;
+    } else if (instance == 1) {
+        // mouse interface
+        return hid_mouse_report_descriptor;
+    }
+    return NULL;
 }
 
 // Invoked when received GET_REPORT control request
@@ -61,11 +78,8 @@ uint8_t const *tud_hid_descriptor_report_cb(uint8_t instance)
 // Return zero will cause the stack to STALL request
 uint16_t tud_hid_get_report_cb(uint8_t instance, uint8_t report_id, hid_report_type_t report_type, uint8_t *buffer, uint16_t reqlen)
 {
-    if (report_id == 1) {
-        // Return keyboard report
-    } else if (report_id == 2) {
-        // Return mouse report
-    }
+    (void) instance; (void) report_id; (void) report_type;
+    (void) buffer; (void) reqlen;
     return 0;
 }
 
@@ -140,46 +154,65 @@ static void uart_rx_task(void *arg)
                     // full frame received
                     if (validate_checksum(frame_buf, expected_len)) {
                         if (frame_buf[1] == 'K') {
+                            // Keyboard frame structure:
+                            // [0] = 0xA5 (magic)
+                            // [1] = 'K' (type)
+                            // [2] = payload_len (should be 8 for keyboard boot report)
+                            // [3] = modifier byte
+                            // [4] = reserved (0x00)
+                            // [5-10] = 6 key codes
+                            // [11] = checksum
 
-                        uint8_t modifier = frame_buf[3];
-                        uint8_t keycode_array[6] = {0};
-                        char ascii_array[6] = {'\0'};
+                            uint8_t modifier = frame_buf[3];
+                            uint8_t keycode_array[6] = {0};
+                            char ascii_array[7] = {'\0'};
 
-                        // Copy all keycodes from payload (up to 6 keys)
-                        int max_keys = (frame_buf[2] < 6) ? frame_buf[2] : 6; // payload length
-                        for (int k = 0; k < max_keys; k++) {
-                            keycode_array[k] = frame_buf[5 + k]; // payload starts at frame_buf[4]
+                            // Extract the 6 keycodes from the boot keyboard report
+                            for (int k = 0; k < 6; k++) {
+                                keycode_array[k] = frame_buf[5 + k];
 
-                            // Convert to ASCII if possible (HID key A-Z = 0x04-0x1D)
-                            if (keycode_array[k] >= 0x04 && keycode_array[k] <= 0x1D) {
-                                ascii_array[k] = 'A' + keycode_array[k] - 0x04;
-                            } else {
-                                ascii_array[k] = 0;
+                                // Convert to ASCII if possible (HID key A-Z = 0x04-0x1D)
+                                if (keycode_array[k] >= 0x04 && keycode_array[k] <= 0x1D) {
+                                    ascii_array[k] = 'A' + keycode_array[k] - 0x04;
+                                } else {
+                                    ascii_array[k] = '.';
+                                }
                             }
-                        }
 
-                        // Ensure host is mounted/ready before sending
-                        if (tud_hid_ready()) {
-                            // interface 0 is keyboard
-                            tud_hid_keyboard_report(0, modifier, keycode_array);
-                        }
+                            // Ensure host is mounted/ready before sending
+                            if (tud_mounted() && tud_hid_ready()) {
+                                // interface 0 is keyboard
+                                tud_hid_keyboard_report(0, modifier, keycode_array);
+                            }
 
-                        // Log all pressed keys
-                        ESP_LOGI("HID_RX", "Keyboard: mod=0x%02X keys=%c %c %c %c %c %c",
-                                modifier,
-                                ascii_array[0], ascii_array[1], ascii_array[2],
-                                ascii_array[3], ascii_array[4], ascii_array[5]);
-
+                            // Log all pressed keys
+                            ESP_LOGI("HID_RX", "Keyboard: mod=0x%02X keys=%c %c %c %c %c %c",
+                                    modifier,
+                                    ascii_array[0], ascii_array[1], ascii_array[2],
+                                    ascii_array[3], ascii_array[4], ascii_array[5]);
 
                         } else if (frame_buf[1] == 'M') {
+                            // Mouse frame structure:
+                            // [0] = 0xA5 (magic)
+                            // [1] = 'M' (type)
+                            // [2] = payload_len (should be 4 for mouse boot report)
+                            // [3] = buttons byte
+                            // [4] = x_displacement (signed int8)
+                            // [5] = y_displacement (signed int8)
+                            // [6] = wheel (signed int8) - usually 0
+                            // [7] = checksum
+
                             uint8_t buttons = frame_buf[3];
                             int8_t dx = (int8_t)frame_buf[4];
                             int8_t dy = (int8_t)frame_buf[5];
-                            ESP_LOGI("HID_RX", "Mouse: buttons=0x%02X dx=%d dy=%d",
-                                    buttons, dx, dy);
+                            int8_t wheel = (frame_buf[2] >= 4) ? (int8_t)frame_buf[6] : 0;
+                            
+                            ESP_LOGI("HID_RX", "Mouse: buttons=0x%02X dx=%d dy=%d wheel=%d",
+                                    buttons, dx, dy, wheel);
                                     
-                            if (tud_hid_ready()) {
-                                tud_hid_mouse_report(0, buttons, dx, dy, 0, 0);
+                            if (tud_mounted() && tud_hid_ready()) {
+                                // interface 1 is mouse
+                                tud_hid_mouse_report(1, buttons, dx, dy, wheel, 0);
                             }
 
                         }
@@ -201,6 +234,15 @@ static void uart_rx_task(void *arg)
 
 void app_main(void)
 {
+    // Initialize button that will trigger HID reports
+    const gpio_config_t boot_button_config = {
+        .pin_bit_mask = BIT64(APP_BUTTON),
+        .mode = GPIO_MODE_INPUT,
+        .intr_type = GPIO_INTR_DISABLE,
+        .pull_up_en = GPIO_PULLUP_ENABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+    };
+    ESP_ERROR_CHECK(gpio_config(&boot_button_config));
 
     ESP_LOGI(TAG, "USB initialization");
     const tinyusb_config_t tusb_cfg = {
@@ -208,11 +250,14 @@ void app_main(void)
         .string_descriptor = hid_string_descriptor,
         .string_descriptor_count = sizeof(hid_string_descriptor) / sizeof(hid_string_descriptor[0]),
         .external_phy = false,
+#if (TUD_OPT_HIGH_SPEED)
+        .fs_configuration_descriptor = hid_configuration_descriptor, // HID configuration descriptor for full-speed and high-speed are the same
+        .hs_configuration_descriptor = hid_configuration_descriptor,
+        .qualifier_descriptor = NULL,
+#else
         .configuration_descriptor = hid_configuration_descriptor,
-};
-
-    ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
-    ESP_LOGI(TAG, "USB initialization DONE");
+#endif // TUD_OPT_HIGH_SPEED
+    };
 
     // UART init section
     uart_config_t uart_config = {
@@ -221,6 +266,7 @@ void app_main(void)
         .parity    = UART_PARITY_DISABLE,
         .stop_bits = UART_STOP_BITS_1,
         .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+        .source_clk = UART_SCLK_DEFAULT,
     };
     ESP_ERROR_CHECK(uart_driver_install(UART_PORT_NUM, UART_BUF_SIZE, 0, 10, &uart_queue, 0));
     ESP_ERROR_CHECK(uart_param_config(UART_PORT_NUM, &uart_config));
@@ -232,20 +278,12 @@ void app_main(void)
 
     xTaskCreate(uart_rx_task, "uart_rx_task", 4096, NULL, 5, NULL);
 
+    ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
+    ESP_LOGI(TAG, "USB initialization DONE");
+
     while (1) {
         tud_task();  // keep TinyUSB stack alive
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 
-    while (1) {
-        vTaskDelay(pdMS_TO_TICKS(10));
-        if (tud_mounted()) {
-            tud_task();
-        } else{
-            printf("Device not connected");
-        }
-        vTaskDelay(pdMS_TO_TICKS(10));
-    }
-
-    
 }
