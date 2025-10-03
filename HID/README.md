@@ -1,5 +1,8 @@
 This folder contains code for HID Encoding/Decoding
 
+### hid_device_v10
+* based off hid_device_v9 with added LED functionality
+
 ### hid_device_v9
 * Works for keyboard & mouse on macbook using ESP32S3DevKitC-1 directly connecting Tx/Rx pins
 * Run instructions from hid_device_v7 --> idf.py menuconfig
