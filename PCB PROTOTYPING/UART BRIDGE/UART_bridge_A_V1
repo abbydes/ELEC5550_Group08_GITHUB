@@ -1,0 +1,49 @@
+BOARD A UART bridge test code: #include "sdkconfig.h"
+#include <stdio.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "driver/uart.h"
+#include "esp_log.h"
+ 
+#define UART_PORT_NUM      UART_NUM_1
+#define UART_BAUD_RATE     921600
+#define UART_TX_PIN        17
+#define UART_RX_PIN        18
+#define UART_BUF_SIZE      1024
+ 
+static const char *TAG = "BoardA";
+ 
+void app_main(void) {
+    uart_config_t uart_config = {
+        .baud_rate = UART_BAUD_RATE,
+        .data_bits = UART_DATA_8_BITS,
+        .parity    = UART_PARITY_DISABLE,
+        .stop_bits = UART_STOP_BITS_1,
+        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+        .source_clk = UART_SCLK_DEFAULT,
+    };
+ 
+    uart_driver_install(UART_PORT_NUM, UART_BUF_SIZE, UART_BUF_SIZE, 0, NULL, 0);
+    uart_param_config(UART_PORT_NUM, &uart_config);
+    uart_set_pin(UART_PORT_NUM, UART_TX_PIN, UART_RX_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+ 
+    uint8_t rxbuf[UART_BUF_SIZE];
+ 
+    while (1) {
+        // send message to Board B
+        const char *msg = "Hello from A\n";
+        uart_write_bytes(UART_PORT_NUM, msg, strlen(msg));
+        ESP_LOGI(TAG, "Sent: %s", msg);
+ 
+        // check for messages from Board B
+        int len = uart_read_bytes(UART_PORT_NUM, rxbuf, sizeof(rxbuf)-1, pdMS_TO_TICKS(500));
+        if (len > 0) {
+            rxbuf[len] = 0; // null terminate
+            ESP_LOGI(TAG, "[RX] %s", rxbuf);
+        } else {
+            ESP_LOGI(TAG, "No response");
+        }
+ 
+        vTaskDelay(pdMS_TO_TICKS(2000)); //2 second repeat
+    }
+}
