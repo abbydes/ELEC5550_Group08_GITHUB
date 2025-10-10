@@ -1,4 +1,4 @@
-Board B UART bridge test code: #include "sdkconfig.h"
+//Board B UART bridge test code: #include "sdkconfig.h"
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
