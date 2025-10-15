@@ -2,8 +2,8 @@ This folder contains code for HID Encoding/Decoding
 
 | HID Transmitter | Description | HID Receiver | Description |
 | :-------: | :------: | :-------: | :-------: |
-| Row 1 Col 1 | Row 1 Col 2 | ### hid_device_v10 | * based off hid_device_v9 with added LED functionality |
-| Row 2 Col 1 | Row 2 Col 2 | Row 2 Col 3 | Row 1 Col 3 |
+| Row 1 Col 1 | Row 1 Col 2 | `hid_device_v10` | based off hid_device_v9 with added LED functionality |
+| Row 2 Col 1 | Row 2 Col 2 | `hid_device_v9` | <ul><li>Works for keyboard & mouse on macbook using ESP32S3DevKitC-1 directly connecting Tx/Rx pins</li><li>Run instructions from hid_device_v7 --> idf.py menuconfig</li></ul>fixed TUD_HID_DESCRIPTOR calls</li><li>corrected byte offsets for mouse data to include wheel</li></ul>corrected interface numbering mismatch</li></ul> |
 
 ### hid_device_v10
 * based off hid_device_v9 with added LED functionality
