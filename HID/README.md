@@ -1,5 +1,10 @@
 This folder contains code for HID Encoding/Decoding
 
+| HID Transmitter | Description | HID Receiver | Description |
+| :-------: | :------: | :-------: | :-------: |
+| Row 1 Col 1 | Row 1 Col 2 | ### hid_device_v10 | * based off hid_device_v9 with added LED functionality |
+| Row 2 Col 1 | Row 2 Col 2 | Row 2 Col 3 | Row 1 Col 3 |
+
 ### hid_device_v10
 * based off hid_device_v9 with added LED functionality
 
