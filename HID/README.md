@@ -1,30 +1,15 @@
 This folder contains code for HID Encoding/Decoding
 
 | HID Transmitter | Description | HID Receiver | Description |
-| :-------: | :------: | :-------: | :-------: |
-| Row 1 Col 1 | Row 1 Col 2 | `hid_device_v10` | based off hid_device_v9 with added LED functionality |
-| Row 2 Col 1 | Row 2 Col 2 | `hid_device_v9` | <ul><li>Works for keyboard & mouse on macbook using ESP32S3DevKitC-1 directly connecting Tx/Rx pins</li><li>Run instructions from hid_device_v7 --> idf.py menuconfig</li></ul>fixed TUD_HID_DESCRIPTOR calls</li><li>corrected byte offsets for mouse data to include wheel</li></ul>corrected interface numbering mismatch</li></ul> |
+| :-------: | :------ | :-------: | :------- |
+| `hid_host_v7` | removed excess UART framing code for simplicity | `hid_device_v10` | based off hid_device_v9 with added LED functionality |
+| `hid_device_v8` | <ul><li>Added UART framing errors and a valid frame timeout</li><li>Globals have been added to track the state</li><li>When no valid frame has arrived for 200ms or if framing errors occur a UART Frame error is pushed into the UART queue</li></ul> | `hid_device_v9` | <ul><li>Works for keyboard & mouse on macbook using ESP32S3DevKitC-1 directly connecting Tx/Rx pins</li><li>Run instructions from hid_device_v7 --> idf.py menuconfig</li><li>fixed TUD_HID_DESCRIPTOR calls</li><li>corrected byte offsets for mouse data to include wheel</li><li>corrected interface numbering mismatch</li><li>added tud_mounted() check to ensure USB is fully enumerated before sending reports - using TinyUSB API calls tud_hid_n_ready(1) and tud_hid_n_mouse_report(1,...)</li><li>prints status every 5 seconds for USB UART connection status reporting</li></ul> |
+| Row 2 Col 1 | Row 2 Col 2 | `hid_device_v9` | <ul><li>Works for keyboard & mouse on macbook using ESP
 
-### hid_device_v10
-* based off hid_device_v9 with added LED functionality
+| Column 1 | Column 2 | Column 3 |
+|:---------|:---------|:---------|
+| Placeholder text | Example List: <ul><li>list item 1</li><li>list item 2</li></ul> | <ul><li>list item 1</li><li>list item 2</li></ul> |
 
-### hid_device_v9
-* Works for keyboard & mouse on macbook using ESP32S3DevKitC-1 directly connecting Tx/Rx pins
-* Run instructions from hid_device_v7 --> idf.py menuconfig
-* fixed TUD_HID_DESCRIPTOR calls
-* corrected byte offsets for mouse data to include wheel
-* corrected interface numbering mismatch
-* added tud_mounted() check to ensure USB is fully enumerated before sending reports - using TinyUSB API calls tud_hid_n_ready(1) and tud_hid_n_mouse_report(1,...)
-* prints status every 5 seconds for USB UART connection status reporting
-
-### hid_host_v7
-* removed excess UART framing code for simplicity
-
-### hid_device_v8
-* Added UART framing errors and a valid frame timeout
-* Globals have been added to track the state
-* When no valid frame has arrived for 200ms or if framing errors occur a UART Frame error is pushed into the UART queue
-* Needs to be tested
 
 ### hid_device_v7
 * based off hid_device_v5
