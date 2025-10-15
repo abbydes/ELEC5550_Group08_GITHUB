@@ -3,12 +3,18 @@ This folder contains code for HID Encoding/Decoding
 | HID Transmitter | Description | HID Receiver | Description |
 | :-------: | :------ | :-------: | :------- |
 | `hid_host_v7` | removed excess UART framing code for simplicity | `hid_device_v10` | based off hid_device_v9 with added LED functionality |
-| `hid_device_v8` | <ul><li>Added UART framing errors and a valid frame timeout</li><li>Globals have been added to track the state</li><li>When no valid frame has arrived for 200ms or if framing errors occur a UART Frame error is pushed into the UART queue</li></ul> | `hid_device_v9` | <ul><li>Works for keyboard & mouse on macbook using ESP32S3DevKitC-1 directly connecting Tx/Rx pins</li><li>Run instructions from hid_device_v7 --> idf.py menuconfig</li><li>fixed TUD_HID_DESCRIPTOR calls</li><li>corrected byte offsets for mouse data to include wheel</li><li>corrected interface numbering mismatch</li><li>added tud_mounted() check to ensure USB is fully enumerated before sending reports - using TinyUSB API calls tud_hid_n_ready(1) and tud_hid_n_mouse_report(1,...)</li><li>prints status every 5 seconds for USB UART connection status reporting</li></ul> |
-| Row 2 Col 1 | Row 2 Col 2 | `hid_device_v9` | <ul><li>Works for keyboard & mouse on macbook using ESP
+| `hid_host_v6` | x | `hid_device_v9` | <ul><li>Works for keyboard & mouse on macbook using ESP32S3DevKitC-1 directly connecting Tx/Rx pins</li><li>Run instructions from hid_device_v7 --> idf.py menuconfig</li><li>fixed TUD_HID_DESCRIPTOR calls</li><li>corrected byte offsets for mouse data to include wheel</li><li>corrected interface numbering mismatch</li><li>added tud_mounted() check to ensure USB is fully enumerated before sending reports - using TinyUSB API calls tud_hid_n_ready(1) and tud_hid_n_mouse_report(1,...)</li><li>prints status every 5 seconds for USB UART connection status reporting</li></ul> |
 
-| Column 1 | Column 2 | Column 3 |
-|:---------|:---------|:---------|
-| Placeholder text | Example List: <ul><li>list item 1</li><li>list item 2</li></ul> | <ul><li>list item 1</li><li>list item 2</li></ul> |
+| `hid_host_v5` | x | `hid_device_v8` | <ul><li>Added UART framing errors and a valid frame timeout</li><li>Globals have been added to track the state</li><li>When no valid frame has arrived for 200ms or if framing errors occur a UART Frame error is pushed into the UART queue</li></ul> |
+| `hid_host_v4` | x | `hid_device_v7` | <ul><li>x
+| `hid_host_v3` | x | `hid_device_v6` | <ul><li>x
+| `hid_host_v2` | x | `hid_device_v5` | <ul><li>x
+| `hid_host_v1` | x | `hid_device_v4` | <ul><li>x
+| ------------- | x | `hid_device_v3` | <ul><li>x
+| ------------- | x | `hid_device_v2` | <ul><li>x
+| ------------- | x | `hid_device_v1` | <ul><li>x
+
+| <ul><li>list item 1</li><li>list item 2</li></ul> | <ul><li>list item 1</li><li>list item 2</li></ul> |
 
 
 ### hid_device_v7
