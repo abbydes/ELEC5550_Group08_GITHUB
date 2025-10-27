@@ -1,5 +1,5 @@
 /*
----------------- ELEC5550 - TEAM_08 - msc_host_V8 ----------------
+---------------- ELEC5550 - TEAM_08 - host_main_V8/msc_example_main ----------------
 Module B (Board B from prototyping) software which has the following functionality:
 - initialises handshake and reprompts it upon UART bridge interruption
 - mounts USB flash-drive to allow for MSC block/sector data transfer
@@ -439,3 +439,4 @@ void app_main(void) {
         }
     }
 }
+
