@@ -1,4 +1,8 @@
-//Adapted from Espressif Systems ESP-IDF->examples->peripherals->usb->device->tusb_hid
+/*
+---------------- ELEC5550 - TEAM_08 - hid_device_v9 ----------------
+Final HID device software 
+*/
+
 #include <stdlib.h>
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
@@ -9,7 +13,7 @@
 #include "driver/uart.h"
 
 #define UART_PORT_NUM      UART_NUM_1
-#define UART_BAUD_RATE     921600
+#define UART_BAUD_RATE     8000000
 #define UART_RX_PIN        18
 #define UART_BUF_SIZE      1024
 
