@@ -1,4 +1,13 @@
-//Board A code
+/*
+---------------- ELEC5550 - TEAM_08 - msc_dev_V9 ----------------
+Module A (Board A from prototyping) software which has the following functionality:
+- initialises handshake and reprompts it upon UART bridge interruption
+- provides USB-MSC device information to laptop to mimic USB
+- writes CBW to the USB flash-drive connected to Module B (Board B)
+- receives CSW from Module B (Board B) and passes onto host laptop
+*/
+
+//required libraries
 #include "sdkconfig.h"
 #include <stdio.h>
 #include <string.h>
@@ -13,14 +22,29 @@
  
 static const char *TAG = "boardA_msc_bridge";
  
-// ---------------- UART CONFIG ----------------
+/*
+UART Configuration
+- TX pin 17 as per PCB module
+- RX pin 18 as per PCB module
+- baud rate of 921600 with 70ms latency 
+- buf size of 2048 to allow for 512 byte packets to be read
+*/
 #define UART_PORT_NUM   UART_NUM_1
 #define UART_TX_PIN     17
 #define UART_RX_PIN     18
 #define UART_BAUD_RATE  921600
 #define UART_BUF_SIZE   2048
 
-// Handshake for Board A
+
+//---------------- HANDSHAKE FUNCTIONS ----------------
+/*
+Handshake for Board A
+- sends 'Board A is ready'
+- waits until 'Board B is ready' is received
+- serial monitor 'Handshake complete with Board B!'
+- task deletion after completed
+- tracks handshake completion
+*/
 static TaskHandle_t handshake_task_handle = NULL;
 static volatile bool handshake_complete = false;
 
@@ -49,42 +73,59 @@ static void handshake_protocol(void *pvParameters) {
                 handshake_complete = true;
                 ESP_LOGI(TAG, "Handshake complete with Board B!");
                 uart_flush_input(UART_PORT_NUM);
-                vTaskDelete(NULL); //delete self
+                vTaskDelete(NULL); // delete task once handshake completed
                 
             }
         } else {
             ESP_LOGW(TAG, "No handshake yet, waiting...");
         }
  
-        //10s timeout
+        //10s timeout if handshake not established
         if ((xTaskGetTickCount() - start_time) > pdMS_TO_TICKS(10000)) {
             ESP_LOGW(TAG, "Handshake timeout – retrying...");
             start_time = xTaskGetTickCount();
         }
  
+        //minimal task delay to reduce latency
         vTaskDelay(pdMS_TO_TICKS(1));
     }
 }
 
-//handshake retrigger for invalid checksum
+/*
+Handshake Retrigger for Board A
+- triggers upon invalid checksum
+- clears UART buffer
+- reinitialises handshake protocol
+- resets 'handshake_complete'
+*/
 static void retrigger_handshake(void) {
     ESP_LOGW(TAG, "Retriggering handshake due to invalid checksum");
 
-    handshake_complete = false;
+    handshake_complete = false; //handshake complete set to false as it is retriggered
 
     uart_flush_input(UART_PORT_NUM); //clear buffer
     xTaskCreate(handshake_protocol, "handshake_protocol", 8196, NULL, 5, &handshake_task_handle); //start new
 }
 
+
 // ---------------- TinyUSB MSC CALLBACKS ----------------
+/*
+Included from tusb_msc_main.c from the ESP-IDF msc host example 
+to emulate required the USB flashdrive information required by 
+the laptop for device connection
+NOTE: this is where future prototype focus should be spent to ensure
+device parameter and drive issues are resolved
+*/
 bool tud_msc_start_stop_cb(uint8_t lun, uint8_t power_condition, bool start, bool load_eject) { return true; }
 bool tud_msc_test_unit_ready_cb(uint8_t lun) { return true; }
 void tud_msc_capacity_cb(uint8_t lun, uint32_t *block_count, uint16_t *block_size) {
     *block_count = 1024;
     *block_size = 512;
 }
- 
-//serial monitor functions
+
+
+// ---------------- SERIAL MONITOR ----------------
+//used to print tx frames sent to Module B to the serial monitor
 static void print_tx_frame(const char *tag, const uint8_t *buf, int len) {
     char line[512];
     char *p = line;
@@ -95,6 +136,7 @@ static void print_tx_frame(const char *tag, const uint8_t *buf, int len) {
     ESP_LOGI(tag, "UART TX (%d bytes): %s", len, line);
 }
  
+//used to print rx frames sent from Module B to Module A to the serial monitor
 static void print_rx_frame(const char *tag, const uint8_t *buf, int len) {
     if (len <= 0) { ESP_LOGI(tag, "No data received"); return; }
     char line[512];
@@ -106,7 +148,20 @@ static void print_rx_frame(const char *tag, const uint8_t *buf, int len) {
     ESP_LOGI(tag, "UART RX (%d bytes): %s", len, line);
 }
  
-// Helper: build and send frame with checksum
+
+// ---------------- MSC BLOCK DATA ----------------
+/*
+This section contains all functions required to both receive and
+send the required MSC block data SCSI commands including WRITE10, 
+READ10, INQUIRY and a fallback CB for debugging purposes.
+*/
+
+/*
+Send frame for Board A
+- constructs the data being sent from Board A to board B
+- adds frame header, type, LBA and payload 
+- writes to UART and prints to serial monitor
+*/
 static void send_frame(uint8_t type, const uint8_t *payload, uint8_t payload_len) {\
     //uart_flush_input(UART_PORT_NUM);
 
@@ -122,10 +177,15 @@ static void send_frame(uint8_t type, const uint8_t *payload, uint8_t payload_len
     for (int i = 0; i < payload_len; i++) sum += frame[4 + i];
     frame[4 + payload_len] = (uint8_t)(0x100 - (sum & 0xFF));
  
-    uart_write_bytes(UART_PORT_NUM, (const char*)frame, sizeof(frame));
-    print_tx_frame(TAG, frame, sizeof(frame));
+    uart_write_bytes(UART_PORT_NUM, (const char*)frame, sizeof(frame)); //write to UART
+    print_tx_frame(TAG, frame, sizeof(frame)); //print to serial monitor
 }
  
+/*
+CB callback
+- explored during prototyping as a potential for sending CBW directly
+- did not appear to effect limited function of prototype but useful for debugging
+*/
 int32_t tud_msc_scsi_cb(uint8_t lun, const uint8_t scsi_cmd[16], void* buffer, uint16_t bufsize) {
     // Forward command to Board B
     //uint8_t header[3] = {0xA5, 'C', 16};
@@ -133,7 +193,16 @@ int32_t tud_msc_scsi_cb(uint8_t lun, const uint8_t scsi_cmd[16], void* buffer, u
     ESP_LOGI(TAG, "Forwarded SCSI command to Board B");
     return -1;
 }
-// Simplified READ10 callback (waits for data back from Board B)
+
+/*
+READ10 callback
+- called when READ10 cbw detected
+- verifies handshake and sends frame via send_frame
+- waits for board B response and prints to serial
+- checks frame length, header, type and checksum
+- copies sector to laptop via memcpy after LBA removed
+- retriggers handshake upon failed checksum
+*/
 int32_t tud_msc_read10_cb(uint8_t lun, uint32_t lba, uint32_t offset, void* buffer, uint32_t bufsize) {
  
     //check for handshake completion
@@ -152,7 +221,7 @@ int32_t tud_msc_read10_cb(uint8_t lun, uint32_t lba, uint32_t offset, void* buff
     send_frame('R', lba_bytes, 4);
     ESP_LOGI(TAG, "Forwarded READ10 to Board B (LBA=%lu, len=%u)", lba, bufsize);
  
-    // Wait for Board B to respond with 'D' frame containing sector data
+    // Wait for Board B to respond with 'D' frame with sector data
     int expected_len = 4 + 4 + bufsize + 1; // header + LBA + sector + checksum
     uint8_t rx_frame[expected_len];  // header + lba + sector + checksum
  
@@ -185,12 +254,19 @@ int32_t tud_msc_read10_cb(uint8_t lun, uint32_t lba, uint32_t offset, void* buff
     memcpy(buffer, &rx_frame[8], data_len);
 
     ESP_LOGI(TAG, "READ10 successful (LBA=%lu, bytes=%u)", lba, data_len);
-    vTaskDelay(pdMS_TO_TICKS(1));
+    vTaskDelay(pdMS_TO_TICKS(1)); //minimal delay to reduce latency
     return data_len;
 }
  
  
-// Similar for WRITE10: send data + wait for ACK
+/*
+WRITE10 callback
+- called when WRITE10 cbw detected
+- verifies handshake and sends frame via send_frame
+- waits for board B ACK response and prints to serial
+- checks frame length, header, type and checksum
+- retriggers handshake upon incorrect checksum
+*/
 int32_t tud_msc_write10_cb(uint8_t lun, uint32_t lba, uint32_t offset, uint8_t* buffer, uint32_t bufsize) {
     
     //check for handshake completion
@@ -222,7 +298,13 @@ int32_t tud_msc_write10_cb(uint8_t lun, uint32_t lba, uint32_t offset, uint8_t* 
     return -1;
 }
  
-// Mandatory INQUIRY callback to fix the linker error
+/*
+INQUIRY callback
+- provides laptop with required vid, pid and rev which are necessary
+  for USB initialisation
+NOTE: similar to the MSC callbacks, may require updating for full
+USB device functionality
+*/
 void tud_msc_inquiry_cb(uint8_t lun, uint8_t vendor_id[8], uint8_t product_id[16], uint8_t product_rev[4]) {
     const char vid[] = "BoardA  ";
     const char pid[] = "MSC Bridge     ";
@@ -232,11 +314,11 @@ void tud_msc_inquiry_cb(uint8_t lun, uint8_t vendor_id[8], uint8_t product_id[16
     memcpy(product_rev, rev, sizeof(rev)-1);
 }
 
-// ---------------- MAIN ----------------
+// ---------------- APP MAIN ----------------
 void app_main(void) {
     ESP_LOGI(TAG, "Board A MSC Transparent Bridge starting...");
  
-    // UART init
+    // UART initalisation with parameters outlined above
     uart_config_t uart_config = {
         .baud_rate = UART_BAUD_RATE,
         .data_bits = UART_DATA_8_BITS,
@@ -245,20 +327,23 @@ void app_main(void) {
         .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
         .source_clk = UART_SCLK_DEFAULT,
     };
+
+    //install driver as per outlined configuration and set TX & RX pins
     uart_driver_install(UART_PORT_NUM, UART_BUF_SIZE, UART_BUF_SIZE, 0, NULL, 0);
     uart_param_config(UART_PORT_NUM, &uart_config);
     uart_set_pin(UART_PORT_NUM, UART_TX_PIN, UART_RX_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
  
-    // Run handshake first
+    //Run initialising handshake 
     xTaskCreate(handshake_protocol, "handshake_protocol", 8196, NULL, 5, &handshake_task_handle);
  
-    // Init TinyUSB
+    //Initiate tinyusb configuration
+    //NOTE: May require updating for full device functionality
     tinyusb_config_t tusb_cfg = {0};
-    //tusb_cfg.device_descriptor = NULL; // use your descriptors here
+    //tusb_cfg.device_descriptor = NULL; //for descriptors
     ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
     ESP_LOGI(TAG, "TinyUSB initialized");
  
     while (1) {
-        tud_task(); // handle USB events
+        tud_task(); //handles USB events by calling READ10, WRITE10, INQUIRY, etc.
     }
 }
