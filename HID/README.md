@@ -1,4 +1,4 @@
-This folder contains code for HID Encoding/Decoding
+This folder contains project codes for human interface devices (HID) i.e. keyboard and mouse. 'Host' refers to PCB Module 1 or the transmitting side, and 'device' refers to PCB Module 2 or the receiver side. Directories hid_host_v7 and hid_device_9 contain the final code implemented on corresponding modules.
 
 | HID Transmitter | Description | HID Receiver | Description |
 | :-------: | :------ | :-------: | :------- |
