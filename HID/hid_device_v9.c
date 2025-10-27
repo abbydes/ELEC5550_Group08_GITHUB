@@ -1,4 +1,8 @@
-//Adapted from Espressif Systems ESP-IDF->examples->peripherals->usb->device->tusb_hid
+/*
+---------------- ELEC5550 - TEAM_08 - hid_device_v9 ----------------
+Final HID device software 
+*/
+
 #include <stdlib.h>
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
