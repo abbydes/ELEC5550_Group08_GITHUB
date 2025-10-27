@@ -1,1 +1,1 @@
-This folder contains files for the KiCad PCB desigm
+This folder contains files for the KiCad PCB design
