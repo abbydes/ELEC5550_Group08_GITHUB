@@ -1,5 +1,5 @@
 /*
----------------- ELEC5550 - TEAM_08 - msc_dev_V9 ----------------
+---------------- ELEC5550 - TEAM_08 - dev_main_V9/tusb_msc_main.c ----------------
 Module A (Board A from prototyping) software which has the following functionality:
 - initialises handshake and reprompts it upon UART bridge interruption
 - provides USB-MSC device information to laptop to mimic USB
@@ -347,3 +347,4 @@ void app_main(void) {
         tud_task(); //handles USB events by calling READ10, WRITE10, INQUIRY, etc.
     }
 }
+
