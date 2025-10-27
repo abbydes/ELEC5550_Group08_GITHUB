@@ -6,6 +6,7 @@ The host and device code is a modified version of the ESP-IDF host and device ex
 
 [USB-MSC Device Example](https://github.com/espressif/esp-idf/tree/master/examples/peripherals/usb/device/tusb_msc_)
 
+The code flow diagrams for the host (module B) and device (module A) can be found in their respective folders. All previous versions of host_main and dev_main have been moved to the ARCHIVE folder.
 
 | MSC Module B | Description | MSC Module A | Description |
 | :-------: | :------ | :-------: | :------- |
