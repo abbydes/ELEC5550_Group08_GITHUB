@@ -13,8 +13,6 @@ This folder contains code for HID Encoding/Decoding
 | ------------- | x | `hid_device_v2` | <ul><li>Integrated deserialisation and logging</li><li>Validates the checksum from the transmitter data</li><li>It prints human-readable keyboard/mouse data directly to the UART.</li><li>It also prints the same string to the command monitor using ESP_LOGI so you can see live activity.</li><li>Does not include dummy testing of random serialised data to test output of receiver</li></ul> |
 | ------------- | x | `hid_device_v1` | <ul><li>x
 
-| <ul><li>list item 1</li><li>list item 2</li></ul> | <ul><li>list item 1</li><li>list item 2</li></ul> |
-
 
 `hid_host_esp-idf`
 * UNMODIFIED official example code from espressif ESP-IDF
