@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP OPA380AIDGKR
+D Transimpedance Amplifiers High Speed Precision Transimpedance
+K
+F http://www.ti.com/general/docs/suppproductinfo.tsp?distId=26&gotoUrl=http%3A%2F%2Fwww.ti.com%2Flit%2Fgpn%2Fopa380
+$ENDCMP
+#
+#End Doc Library

@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP TS18-5-15-SL-160-SMT-TR
+D 5 x 5 mm, 1.5 mm Actuator Height, 160 gf, Silver, Surface Mount, TR, SPST, Tactile Switch
+K
+F https://www.sameskydevices.com/product/resource/ts18.pdf
+$ENDCMP
+#
+#End Doc Library

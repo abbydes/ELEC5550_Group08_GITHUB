@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP VEMD5060X01
+D Photodiode 820nm 30ns 130 4-SMD, No Lead
+K
+F https://www.vishay.com/docs/84278/vemd5060x01.pdf
+$ENDCMP
+#
+#End Doc Library

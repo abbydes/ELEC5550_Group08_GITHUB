@@ -1,0 +1,29 @@
+EESchema-LIBRARY Version 2.3
+#encoding utf-8
+#SamacSys ECAD Model OPA380AIDGKR
+#/681551/1742325/2.50/8/3/Undefined or Miscellaneous
+DEF OPA380AIDGKR U 0 30 Y Y 1 F N
+F0 "U" 950 300 50 H V L CNN
+F1 "OPA380AIDGKR" 950 200 50 H V L CNN
+F2 "SOP65P490X110-8N" 950 100 50 H I L CNN
+F3 "http://www.ti.com/general/docs/suppproductinfo.tsp?distId=26&gotoUrl=http%3A%2F%2Fwww.ti.com%2Flit%2Fgpn%2Fopa380" 950 0 50 H I L CNN
+F4 "Transimpedance Amplifiers High Speed Precision Transimpedance" 950 -100 50 H I L CNN "Description"
+F5 "1.1" 950 -200 50 H I L CNN "Height"
+F6 "595-OPA380AIDGKR" 950 -300 50 H I L CNN "Mouser Part Number"
+F7 "https://www.mouser.co.uk/ProductDetail/Texas-Instruments/OPA380AIDGKR?qs=7nS3%252BbEUL6se7xvHvUhv0w%3D%3D" 950 -400 50 H I L CNN "Mouser Price/Stock"
+F8 "Texas Instruments" 950 -500 50 H I L CNN "Manufacturer_Name"
+F9 "OPA380AIDGKR" 950 -600 50 H I L CNN "Manufacturer_Part_Number"
+DRAW
+X NC_1 1 0 0 200 R 50 50 0 0 P
+X -IN 2 0 -100 200 R 50 50 0 0 I
+X +IN 3 0 -200 200 R 50 50 0 0 I
+X V- 4 0 -300 200 R 50 50 0 0 W
+X NC_3 8 1100 0 200 L 50 50 0 0 P
+X V+ 7 1100 -100 200 L 50 50 0 0 W
+X OUT 6 1100 -200 200 L 50 50 0 0 O
+X NC_2 5 1100 -300 200 L 50 50 0 0 P
+P 5 0 1 6 200 100 900 100 900 -400 200 -400 200 100 N
+ENDDRAW
+ENDDEF
+#
+#End Library

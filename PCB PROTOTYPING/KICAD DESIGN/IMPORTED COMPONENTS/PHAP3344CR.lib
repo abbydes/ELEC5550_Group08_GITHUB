@@ -1,0 +1,25 @@
+EESchema-LIBRARY Version 2.3
+#encoding utf-8
+#SamacSys ECAD Model PHAP3344CR
+#/19784379/1742325/2.50/4/3/Switch
+DEF PHAP3344CR S 0 30 Y Y 1 F N
+F0 "S" 1050 300 50 H V L CNN
+F1 "PHAP3344CR" 1050 200 50 H V L CNN
+F2 "PHAP3344CR" 1050 100 50 H I L CNN
+F3 "https://www.mouser.de/datasheet/2/26/6mmMJTPSERIES16NOV2021-3441543.pdf" 1050 0 50 H I L CNN
+F4 "Tactile Switches TACT SWITCH PCB MOUNT  160gf to 260gf 50mA  12 VDC  Gull Wing Lead  + 70 C" 1050 -100 50 H I L CNN "Description"
+F5 "5.2" 1050 -200 50 H I L CNN "Height"
+F6 "642-PHAP3344CR" 1050 -300 50 H I L CNN "Mouser Part Number"
+F7 "https://www.mouser.co.uk/ProductDetail/Apem/PHAP3344CR?qs=HFfMDpzxxd0xUghrLnfAaw%3D%3D" 1050 -400 50 H I L CNN "Mouser Price/Stock"
+F8 "Apem" 1050 -500 50 H I L CNN "Manufacturer_Name"
+F9 "PHAP3344CR" 1050 -600 50 H I L CNN "Manufacturer_Part_Number"
+DRAW
+X COM_1 1 0 0 200 R 50 50 0 0 P
+X COM_2 2 1200 0 200 L 50 50 0 0 P
+X NO_1 3 0 -100 200 R 50 50 0 0 P
+X NO_2 4 1200 -100 200 L 50 50 0 0 P
+P 5 0 1 6 200 100 1000 100 1000 -200 200 -200 200 100 N
+ENDDRAW
+ENDDEF
+#
+#End Library

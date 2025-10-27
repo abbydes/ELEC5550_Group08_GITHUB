@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP TEMD5020X01
+D Photodiodes Top view 430-1100nm +/-65 deg
+K
+F https://www.vishay.com/doc?84685
+$ENDCMP
+#
+#End Doc Library

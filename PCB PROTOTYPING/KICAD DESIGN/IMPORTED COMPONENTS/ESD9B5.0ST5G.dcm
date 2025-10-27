@@ -1,0 +1,9 @@
+EESchema-DOCLIB  Version 2.0
+#
+$CMP ESD9B5.0ST5G
+D SZ Prefix for Automotive and Other Applications Requiring Unique Site and Control Change Requirements ; AECQ101 Qualified and PPAP Capable ; This is a PbFree Device; Low Capacitance 15 pF; Low Clamping Voltage; Small Body Outline Dimensions: 0.039 x 0.024 (1.0mm x 0.60mm); Low Body Height: 0.016 (0.4 mm); Response Time is < 1 ns; IEC6100042 Level 4 ESD Protection; Low Leakage
+K
+F https://www.onsemi.com/pub/Collateral/ESD9B-D.PDF
+$ENDCMP
+#
+#End Doc Library

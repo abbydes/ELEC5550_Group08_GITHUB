@@ -1,0 +1,30 @@
+EESchema-LIBRARY Version 2.3
+#encoding utf-8
+#SamacSys ECAD Model TEMD5020X01
+#/655932/1742325/2.50/2/3/Photodiode
+DEF TEMD5020X01 D 0 30 Y Y 1 F N
+F0 "D" 130 -150 50 H V L CNN
+F1 "TEMD5020X01" 130 -250 50 H V L CNN
+F2 "TEMD5020X01" 130 -350 50 H I L CNN
+F3 "https://www.vishay.com/doc?84685" 130 -450 50 H I L CNN
+F4 "Photodiodes Top view 430-1100nm +/-65 deg" 130 -550 50 H I L CNN "Description"
+F5 "1.22" 130 -650 50 H I L CNN "Height"
+F6 "782-TEMD5020" 130 -750 50 H I L CNN "Mouser Part Number"
+F7 "https://www.mouser.co.uk/ProductDetail/Vishay-Semiconductors/TEMD5020X01?qs=9tTKLf9QuYL0EH6exdsozg%3D%3D" 130 -850 50 H I L CNN "Mouser Price/Stock"
+F8 "Vishay" 130 -950 50 H I L CNN "Manufacturer_Name"
+F9 "TEMD5020X01" 130 -1050 50 H I L CNN "Manufacturer_Part_Number"
+DRAW
+X K 1 0 -400 100 U 50 50 0 0 P
+X A 2 0 0 100 D 50 50 0 0 P
+P 2 0 1 6 0 -250 0 -300 N
+P 2 0 1 6 0 -150 0 -100 N
+P 2 0 1 6 -200 -70 -100 -170 N
+P 2 0 1 6 -260 -130 -160 -230 N
+P 2 0 1 6 50 -250 -50 -250 N
+P 4 0 1 10 -220 -200 -190 -170 -160 -230 -220 -200 F
+P 4 0 1 10 -160 -140 -130 -110 -100 -170 -160 -140 F
+P 4 0 1 10 -50 -150 50 -150 0 -250 -50 -150 F
+ENDDRAW
+ENDDEF
+#
+#End Library
