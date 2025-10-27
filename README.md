@@ -41,6 +41,8 @@ Similary to the ESP32-S3 prototype testing, rudimentary pieces of code were requ
 
 Code regarding PCB hardware verification can be found in the PCB PROTOTYPING folder.
 
+The PCB prototyping folder also includes the KICAD design documents which are located in the KICAD DESIGN folder under PCB Prototyping
+
 ## Finalised
 All of the code must be finalised and submitted in a finalised github repository.
 
