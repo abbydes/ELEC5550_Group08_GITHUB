@@ -1,4 +1,8 @@
-//Adapted from Espressif Systems ESP-IDF->examples->peripherals->usb->host->hid
+/*
+---------------- ELEC5550 - TEAM_08 - hid_host_v7 ----------------
+Final HID host software 
+*/
+
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
@@ -645,5 +649,6 @@ void app_main(void)
     gpio_isr_handler_remove(APP_QUIT_PIN);
     xQueueReset(app_event_queue);
     vQueueDelete(app_event_queue);
+
 
 }
