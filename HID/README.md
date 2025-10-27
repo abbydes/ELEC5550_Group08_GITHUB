@@ -1,4 +1,7 @@
-This folder contains project codes for human interface devices (HID) i.e. keyboard and mouse, and code flow diagrams. 'Host' refers to PCB Module 1 or the transmitting side, and 'device' refers to PCB Module 2 or the receiver side. Directories hid_host_v7 and hid_device_9 contain the final code implemented on corresponding modules.
+This folder contains project codes for human interface devices (HID) i.e. keyboard and mouse, and code flow diagrams. The table below contains updates and descriptions of each code iteration. These code iterations that are not the final host and device codes are located in the ARCHIVE directory.
+- `Host` refers to PCB Module 1 or the transmitting side.
+- `Device` refers to PCB Module 2 or the receiver side.
+- Directories hid_host_v7 and hid_device_9 contain the final code implemented on corresponding modules.
 
 | HID Transmitter | Description | HID Receiver | Description |
 | :-------: | :------ | :-------: | :------- |
