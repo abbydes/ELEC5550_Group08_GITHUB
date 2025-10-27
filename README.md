@@ -29,7 +29,7 @@ Code regarding HID Encoding/decoding can be found in the HID folder.
 ## USB MSC Encoding/Decoding
 The project specifies the connection of a USB flashdrive into a module which then encodes the MSC data, transfers it over the laser, decodes it and provides it to the host laptop.
 
-Code regarding MSC Encoding/decoding can be found in the MSC folder.
+Code regarding MSC Encoding/decoding can be found in the MSC folder alongside descriptions for each code version and code flow diagrams.
 
 ## ESP32 Prototyping
 This project includes the creation of both hardware and software. Rudimentary pieces of code were used to verify hardware design using the ESP32-S3 as a stepping stone to PCB design.
@@ -42,11 +42,6 @@ Similary to the ESP32-S3 prototype testing, rudimentary pieces of code were requ
 Code regarding PCB hardware verification can be found in the PCB PROTOTYPING folder.
 
 The PCB prototyping folder also includes the KICAD design documents which are located in the KICAD DESIGN folder under PCB Prototyping
-
-## Finalised
-All of the code must be finalised and submitted in a finalised github repository.
-
-Finalised code can be found in the FINALISED folder.
 
 ## File Management
 All files are to be uploaded to their respective folders. New file versions to be created each week to allow for proper version control.
